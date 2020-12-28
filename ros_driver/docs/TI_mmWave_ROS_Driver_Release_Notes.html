@@ -27,8 +27,8 @@ The TI mmWave ROS driver integrates the mmWave out-of-box demo with Robot OS (RO
 Features
 ========
 
-- Compatible with TI mmWave SDK v3.4.0.3 out-of-box demo when using IWR6843AOPEVM
-- Compatible with TI mmWave SDK v3.4.0.3 out-of-box demo when using IWR6843 ES2.0 EVM
+- Compatible with TI mmWave SDK v3.5 out-of-box demo when using IWR6843AOPEVM
+- Compatible with TI mmWave SDK v3.5 out-of-box demo when using IWR6843 ES2.0 EVM
 - Offers the out-of-box demo Command Line Interface (CLI) as a ROS Service
 - Reads Radar data from the mmWave EVM and publishes it as a ROS PointCloud2 Message
 - Outputs the {X,Y,Z} coordinate and intensity (snr) of each detected point in the ROS PointCloud2 Message
@@ -40,6 +40,12 @@ Limitations
 The following is a list of known limitations for this release that were known at the time of release.
 - Currently tested for the IWR6843 EVM and IWR6843AOPEVM only
 - The mmWave EVM must be configured to only send the "detected objects¨ data. The other possible output data types such as "log magnitude range¨, "noise profile¨, heat maps, etc. are not currently supported by the ROS driver. Also, the Doppler/velocity field is not currently output in the ROS PointCloud2 Message.
+
+Changes in Version 2.1
+========================
+The following is a list of changes compared to the previous release.
+- Added command 'calibData 0 0 0' to all cfg files to support TI mmWave SDK 3.5
+- Changed instructions to download source from git.ti.com 
 
 Changes in Version 2.0
 ========================
