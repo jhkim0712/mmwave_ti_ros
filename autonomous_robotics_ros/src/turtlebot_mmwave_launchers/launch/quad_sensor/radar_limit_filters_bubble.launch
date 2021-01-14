@@ -1,0 +1,183 @@
+<!--
+  Filters for the data from the radar
+ -->
+<launch>
+
+   <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen"/>
+   
+   <node pkg="nodelet" type="nodelet" name="x_filt_0" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="ti_mmwave/radar_scan_pcl_0" />
+      <remap from="~output" to="x_filt_out_0" />
+      <rosparam>
+         filter_field_name: x
+         filter_limit_min: 0.1
+         filter_limit_max: 4
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="y_filt_0" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="x_filt_out_0" />
+      <remap from="~output" to="xy_filt_out_0" />
+      <rosparam>
+         filter_field_name: y
+         filter_limit_min: -3
+         filter_limit_max: 3
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="z_filt_0" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xy_filt_out_0" />
+      <remap from="~output" to="xyz_filt_out_0" />
+      <rosparam>
+         filter_field_name: z
+         filter_limit_min: -0.4
+         filter_limit_max: 0.10
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="i_filt_0" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xyz_filt_out_0" />
+      <remap from="~output" to="xyzi_filt_out_0" />
+      <rosparam>
+         filter_field_name: intensity
+         filter_limit_min: 8
+         filter_limit_max: 100
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+
+<node pkg="nodelet" type="nodelet" name="x_filt_1" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="ti_mmwave/radar_scan_pcl_1" />
+      <remap from="~output" to="x_filt_out_1" />
+      <rosparam>
+         filter_field_name: x
+         filter_limit_min: 0.1
+         filter_limit_max: 4
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="y_filt_1" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="x_filt_out_1" />
+      <remap from="~output" to="xy_filt_out_1" />
+      <rosparam>
+         filter_field_name: y
+         filter_limit_min: -3
+         filter_limit_max: 3
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="z_filt_1" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xy_filt_out_1" />
+      <remap from="~output" to="xyz_filt_out_1" />
+      <rosparam>
+         filter_field_name: z
+         filter_limit_min: -0.4
+         filter_limit_max: 0.10
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="i_filt_1" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xyz_filt_out_1" />
+      <remap from="~output" to="xyzi_filt_out_1" />
+      <rosparam>
+         filter_field_name: intensity
+         filter_limit_min: 8
+         filter_limit_max: 100
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+
+<node pkg="nodelet" type="nodelet" name="x_filt_2" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="ti_mmwave/radar_scan_pcl_2" />
+      <remap from="~output" to="x_filt_out_2" />
+      <rosparam>
+         filter_field_name: x
+         filter_limit_min: 0.1
+         filter_limit_max: 4
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="y_filt_2" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="x_filt_out_2" />
+      <remap from="~output" to="xy_filt_out_2" />
+      <rosparam>
+         filter_field_name: y
+         filter_limit_min: -3
+         filter_limit_max: 3
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="z_filt_2" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xy_filt_out_2" />
+      <remap from="~output" to="xyz_filt_out_2" />
+      <rosparam>
+         filter_field_name: z
+         filter_limit_min: -0.4
+         filter_limit_max: 0.10
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="i_filt_2" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xyz_filt_out_2" />
+      <remap from="~output" to="xyzi_filt_out_2" />
+      <rosparam>
+         filter_field_name: intensity
+         filter_limit_min: 8
+         filter_limit_max: 100
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+
+<node pkg="nodelet" type="nodelet" name="x_filt_3" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="ti_mmwave/radar_scan_pcl_3" />
+      <remap from="~output" to="x_filt_out_3" />
+      <rosparam>
+         filter_field_name: x
+         filter_limit_min: 0.1
+         filter_limit_max: 4
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="y_filt_3" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="x_filt_out_3" />
+      <remap from="~output" to="xy_filt_out_3" />
+      <rosparam>
+         filter_field_name: y
+         filter_limit_min: -3
+         filter_limit_max: 3
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="z_filt_3" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xy_filt_out_3" />
+      <remap from="~output" to="xyz_filt_out_3" />
+      <rosparam>
+         filter_field_name: z
+         filter_limit_min: -0.4
+         filter_limit_max: 0.10
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+   
+   <node pkg="nodelet" type="nodelet" name="i_filt_3" args="load pcl/PassThrough pcl_manager" output="screen">
+      <remap from="~input" to="xyz_filt_out_3" />
+      <remap from="~output" to="xyzi_filt_out_3" />
+      <rosparam>
+         filter_field_name: intensity
+         filter_limit_min: 8
+         filter_limit_max: 100
+         filter_limit_negative: False
+      </rosparam>
+   </node>
+</launch>

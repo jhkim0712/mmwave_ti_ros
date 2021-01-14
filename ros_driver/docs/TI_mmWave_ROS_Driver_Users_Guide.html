@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>TI mmWave ROS Driver User's Guide - Version 2.0</title>
+<title>TI mmWave ROS Driver User's Guide - Version 2.1</title>
 </head>
 
 <!-- START PRE -->
@@ -120,85 +120,41 @@ xwr64xxAOP_mmw_demo.bin | IWR6843AOPEVM   |  `<INDUSTRIAL_TOOLBOX_INSTALL_DIR>\m
 
 ### Building the TI mmWave ROS driver
 
-1. Follow the instructions on the following webpage to create a new ROS workspace:
-http://wiki.ros.org/ROS/Tutorials/InstallingandConfiguringROSEnvironment
+1. The packages for all ROS labs are held on git.ti.com. To download the packages, first ensure that git is installed on your computer. 
 
-  [[d **NOTE:** 
-  For convenience, the commands to source the required ROS environment setup scripts (“source /opt/ros/kinetic/setup.bash” and “source `<workspace_dir>/devel/setup.bash`”) can be placed at the end of your ~/.bashrc file so they are executed automatically every time you open a new Terminal/shell.  Otherwise, you will need to source them each time you open a new Terminal/shell.  The following commands can be used to add the “source” commands to the end of your ~/.bashrc file.  In the second command below make sure to change “`<workspace_dir>`” to your actual workspace directory.
-  ]]
+  ```
+  sudo apt-get install git
+  ```
 
-	[[y **Caution:** 
-	Copying the commands from a web browser sometimes adds extra newline characters that will cause the commands to fail when pasted into Linux.Open the doc in a stand-alone PDF reader (i.e. Adobe Acrobat, etc.) if this occurs while you copy and paste commands directly into Linux.
- 	]]
+2. Next, clone the git repository from git.ti.com. 
 
-	```
-	$ echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
-	```
-	```
-	$ echo "source <workspace_dir>/devel/setup.bash" >> ~/.bashrc
-	```
+  ```
+  git clone git.ti.com/mmwave_ti_ros/mmwave_ti_ros.git
+  ```
 
-	After you run these commands to add the scripts to your ~/.bashrc file, you must close and re-open your Terminal/shell for them to take effect.
-	Please note that the script in the devel directory is specific to the workspace and you would need to change your ~/.bashrc file and re-open your shell in order to work in a different workspace.
+3. Change directory to the ROS Driver lab. This is the workspace directory. 
 
-	Alternatively you can copy and paste the commands to your ~/.bashrc file using an editor. for example the command shown below should open ~/.bashrc using gedit text editor 
-	
-	```
-	gedit ~/.bashrc
-	```
+    ```
+    cd mmwave_ti_ros/ros_driver/
+    ```
 
-2. Install the ROS ‘serial’ package:
+3. Build the lab.
+  ```
+  catkin_make
+  ```
 
-	a) Use GIT to download (clone) the ROS serial driver into your <`workspace_dir>/src` directory:
-
-	```
-	$ cd <workspace_dir>/src
-	```
-	```
-	$ git clone https://github.com/wjwwood/serial.git
-	```
-
-	b) More documentation on this library can be found at: http://wjwwood.io/serial/
-
-3.	Download the TI mmWave ROS Driver (ti_mmwave_rospkg) and copy it to your `<workspace_dir>/src` directory:
-
-	a) Point your web browser to the following link: 
-	http://dev.ti.com/tirex/#/?link=Software
-		Click on “mmWave Sensors” and then click on “Industrial Toolbox"
-
-	b) Click on the link for “Labs”
-
-	c) Click on the “ROS Point Cloud Visualizer” lab in the table in the center
-
-	d) Click on the “Download All” button on the right side as shown in the following image and accept the user license agreement when prompted.  Choose to open the downloaded zip file if prompted or save it to disk first and then open it by double-clicking it from the downloaded location.
-	<img src="images/Ros_TIREX.png" class="img-responsive"/> 
-
-	e)	Navigate into the folder structure of the opened zip file to the path shown in the following figure and then double-click on the `ti_mmwave_rospkg_<ver>`.zip file to open it. (Note that the path may start with `mmwave_training_<ver>` as shown or `mmwave_sensors/industrial_toolbox_<ver>` depending on package version)
-	<img src="images/Ros_Folder_Content.png" class="img-responsive"/> 
-
-	f) After opening the `ti_mmave_rospkg_<ver>.zip` file, you should see the ti_mmwave_rospkg folder as shown in the left window in following screenshot. Open a new file browser and navigate to your `<workspace_dir>`/src directory as shown in the right window in the screenshot.  Copy the ti_mmwave_rospkg folder to your `<workspace_dir>/src` directory by dragging it from the source (left) window to the destination (right) window.
-	<img src="images/Copy_paste.png" class="img-responsive"/>
-
-	g) You should now see the ti_mmwave_rospkg folder in your `<workspace_dir>/src` directory as shown in the following screenshot.
-	<img src="images/ti_mmWave_rospkg_folder.png" class="img-responsive"/>
-
-4.	Build your project:
-
-	In the Terminal/shell, go to your `<workspace_dir>` directory and build the driver: 
-	```
-	$ cd <workspace_dir>
-	```
-	```
-	$ catkin_make
-	```
+4. Source the setup.bash file 
+  ```
+  source devel/setup.bash
+  ```
 		
-	If all of the installation steps were followed and both ROS environment scripts were sourced, the driver should build successfully and you should see something similar to the following at the end of the output. Your output may look slightly different but it should still show “[100%]”. 
+If all of the installation steps were followed and both ROS environment scripts were sourced, the driver should build successfully and you should see something similar to the following at the end of the output. Your output may look slightly different but it should still show “[100%]”. 
 
-	[[g! build Successful 
-	[100%] Linking CXX executable /home/username/catkin_ws/devel/lib/ti_mmwave_rospkg/ti_mmwave_rospkg
-	[100%] Built target ti_mmwave_rospkg Scanning dependencies of target ti_mmwave_rospkg_generate_messages
-	[100%] Built target ti_mmwave_rospkg_generate_messages
-	]]
+[[g! build Successful 
+[100%] Linking CXX executable /home/username/catkin_ws/devel/lib/ti_mmwave_rospkg/ti_mmwave_rospkg
+[100%] Built target ti_mmwave_rospkg Scanning dependencies of target ti_mmwave_rospkg_generate_messages
+[100%] Built target ti_mmwave_rospkg_generate_messages
+]]
  
 ## Running the driver
 
