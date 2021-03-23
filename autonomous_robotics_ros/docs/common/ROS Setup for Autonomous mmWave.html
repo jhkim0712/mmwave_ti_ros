@@ -33,18 +33,14 @@ This will enable users to gain familiarity with the sensor's capabilities as wel
 
 #### ISK EVM  
   
+The following ISK modules are compatible. Only one of the following is required for this lab.
+
 Quantity          | Item    
 ------------------|-----------------  
  1 or 4        | Antenna Module Board: [IWR6843ISK](http://www.ti.com/tool/IWR6843ISK)
-
-  
-OR
- 
-#### AOP EVM  
-
- Quantity          | Item    
-------------------|-----------------
+ 1 or 4        | Antenna Module Board: [IWR1843BOOST](http://www.ti.com/tool/IWR6843ISK)
  1 or 4       | [IWR6843AOPEVM](http://www.ti.com/tool/IWR6843AOPEVM)
+ 
 
  [[r! IWR6843 ES2.0 Only
  This lab is only compatible with ES2.0 version of IWR6843. 
@@ -225,20 +221,21 @@ and re-open the shell for the updated **~/.bashrc** file to take effect.
 1. The packages for all ROS labs are held on git.ti.com. To download the packages, first ensure that git is installed on your computer. 
 
   ```
-  sudo apt-get install git
+  $ sudo apt install git
   ```
 
 2. Next, download the repository to the user's home directory. Skip this step if the git repository has already been cloned. 
 
   ```
-  cd ~ && git clone git.ti.com/
+  $ cd ~ 
+  $ git clone https://git.ti.com/git/mmwave_radar/mmwave_ti_ros.git
   ```
 
 3. Change directory to the autonomous_robotics_ros folder. The safety bubble lab is included in the same folder. 
 
-    ```
-    cd mmwave_ti_ros/autonomous_robotics_ros/
-    ```
+  ```
+  $ cd mmwave_ti_ros/autonomous_robotics_ros/
+  ```
 
 3. Build the lab.
   ```
