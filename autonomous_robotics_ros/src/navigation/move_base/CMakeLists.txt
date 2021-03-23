@@ -20,7 +20,8 @@ find_package(catkin REQUIRED
         rospy
         rotate_recovery
         std_srvs
-        tf
+        tf2_geometry_msgs
+        tf2_ros
 )
 find_package(Eigen3 REQUIRED)
 add_definitions(${EIGEN3_DEFINITIONS})
@@ -64,11 +65,14 @@ set_target_properties(move_base_node PROPERTIES OUTPUT_NAME move_base)
 
 install(
     TARGETS
-        move_base
         move_base_node
-    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(
+    TARGETS
+        move_base
+    DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
 ## Mark cpp header files for installation
@@ -76,3 +80,4 @@ install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
 )
+

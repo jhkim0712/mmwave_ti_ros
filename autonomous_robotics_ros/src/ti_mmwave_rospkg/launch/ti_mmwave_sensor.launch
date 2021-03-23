@@ -18,13 +18,13 @@
     <param name="data_rate" value="921600"   />
     <param name="max_allowed_elevation_angle_deg" value="$(arg max_allowed_elevation_angle_deg)"   />
     <param name="max_allowed_azimuth_angle_deg" value="$(arg max_allowed_azimuth_angle_deg)"   />
-    <param name="frame_id" value="/ti_mmwave"/>
+    <param name="frame_id" value="ti_mmwave"/>
     <remap from="/ti_mmwave/radar_scan_pcl" to="/ti_mmwave/radar_scan_pcl"/>
   </node>
   
   <!-- mmWaveQuickConfig node (terminates after configuring mmWave sensor) -->
   <node pkg="ti_mmwave_rospkg" type="mmWaveQuickConfig" name="mmWaveQuickConfig" args="$(find ti_mmwave_rospkg)/cfg/$(arg device)_$(arg config).cfg" output="screen" />
   
-  <node pkg="tf" type="static_transform_publisher" name="radar_baselink_0" args="0.19 0 0.18 0 0 3.1415 base_link ti_mmwave 100"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="radar_baselink_0" args="0.19 0 0.18 0 0 3.1415 base_link ti_mmwave"/>
 
 </launch>
