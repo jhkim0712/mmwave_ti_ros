@@ -77,6 +77,7 @@ public:
   ~RotateRecovery();
 
 private:
+  costmap_2d::Costmap2DROS* global_costmap_;
   costmap_2d::Costmap2DROS* local_costmap_;
   bool initialized_;
   double sim_granularity_, min_rotational_vel_, max_rotational_vel_, acc_lim_th_, tolerance_, frequency_;
