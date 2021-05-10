@@ -1,4 +1,33 @@
 #include <DataHandlerClass.h>
+#define PCL_NO_PRECOMPILE
+
+//#include <pcl/memory.h>
+#include <pcl/pcl_macros.h>
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+#include <pcl/io/pcd_io.h>
+
+struct mmWaveCloudType
+{
+    PCL_ADD_POINT4D;
+    union
+    {
+        struct
+        {
+            float intensity;
+            float velocity;
+        };
+        float data_c[4];
+    };
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGN_ALIGN16;
+
+POINT_CLOUD_REGISTER_POINT_STRUCT (MyPointType,
+                                    (float, x, x)
+                                    (float, y, y)
+                                    (float, z, z)
+                                    (float, intensity, intensity)
+                                    (float, velocity, velocity))
 
 DataUARTHandler::DataUARTHandler(ros::NodeHandle* nh) : currentBufp(&pingPongBuffers[0]) , nextBufp(&pingPongBuffers[1]) {
     DataUARTHandler_pub = nh->advertise<sensor_msgs::PointCloud2>("/ti_mmwave/radar_scan_pcl", 100);
@@ -240,7 +269,8 @@ void *DataUARTHandler::sortIncomingData( void )
     float maxElevationAngleRatioSquared;
     float maxAzimuthAngleRatio;
     
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI>> RScan(new pcl::PointCloud<pcl::PointXYZI>);
+    //boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI>> RScan(new pcl::PointCloud<pcl::PointXYZI>);
+    boost::shared_ptr<pcl::PointCloud<mmWaveCloudType>> RScan(new pcl::PointCloud<mmWaveCloudType>);
     ti_mmwave_rospkg::RadarScan radarscan;
 
     //wait for first packet to arrive
@@ -455,6 +485,8 @@ void *DataUARTHandler::sortIncomingData( void )
                     RScan->points[i].x = mmwData.newObjOut.y;   // ROS standard coordinate system X-axis is forward which is the mmWave sensor Y-axis
                     RScan->points[i].y = -mmwData.newObjOut.x;  // ROS standard coordinate system Y-axis is left which is the mmWave sensor -(X-axis)
                     RScan->points[i].z = mmwData.newObjOut.z;   // ROS standard coordinate system Z-axis is up which is the same as mmWave sensor Z-axis
+
+                    RScan->points[i].velocity = mmwData.newObjOut.velocity;
 
                     radarscan.header.frame_id = frameID;
                     radarscan.header.stamp = ros::Time::now();
