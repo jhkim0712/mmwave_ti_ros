@@ -22,7 +22,7 @@ struct mmWaveCloudType
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGN_ALIGN16;
 
-POINT_CLOUD_REGISTER_POINT_STRUCT (MyPointType,
+POINT_CLOUD_REGISTER_POINT_STRUCT (mmWaveCloudType,
                                     (float, x, x)
                                     (float, y, y)
                                     (float, z, z)
