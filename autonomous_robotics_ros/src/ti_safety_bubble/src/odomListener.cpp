@@ -38,6 +38,11 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+enum SafetyBubbleShape {
+  RECTANGULAR,
+  CIRCULAR
+};
+
 #include <math.h>
 #include "ros/ros.h"
 #include "std_msgs/String.h"
@@ -48,6 +53,10 @@
 #include "geometry_msgs/Twist.h"
 
 double robotX, robotY;
+// radius for inner and outer bubbles
+double innerLimit, outerLimit;
+// dimensions for rectangular bubbles 
+double innerWidth, innerLength, outerWidth, outerLength; 
 nav_msgs::OccupancyGrid gMsg;
 
 /**
@@ -90,6 +99,72 @@ double calculateDistance(double p1x, double p1y, double p2x, double p2y)
   return sqrt(pow(p1x - p2x, 2) + pow(p1y - p2y, 2));
 }
 
+void publishCircularSafetyBubble(ros::Publisher *slow_pub, ros::Publisher *stop_pub)
+{
+  // create polygons for zones
+  geometry_msgs::PolygonStamped slowzone;
+  geometry_msgs::PolygonStamped stopzone;
+  slowzone.header.frame_id = "slowzone";
+  stopzone.header.frame_id = "stopzone";
+  int numPoints = 12; // number of points for polygon
+  for (int i = 0; i < numPoints; ++i) {
+    double angle = i * ( 360.0 / (double) numPoints) * M_PI / 180.0;
+    geometry_msgs::Point32 slow_point, stop_point;
+    slow_point.z = 0.0;
+    stop_point.z = 0.0;
+    slow_point.x = cos(angle) * outerLimit;
+    slow_point.y = sin(angle) * outerLimit;
+    stop_point.x = cos(angle) * innerLimit;
+    stop_point.y = sin(angle) * innerLimit;
+    slowzone.polygon.points.push_back(slow_point);
+    stopzone.polygon.points.push_back(stop_point);
+  }
+  slow_pub->publish(slowzone);
+  stop_pub->publish(stopzone);
+}
+
+void publishRectangularSafetyBubble(ros::Publisher *slow_pub, ros::Publisher *stop_pub)
+{
+  geometry_msgs::PolygonStamped slowzone;
+  geometry_msgs::PolygonStamped stopzone;
+  slowzone.header.frame_id = "slowzone";
+  stopzone.header.frame_id = "stopzone";
+  // TODO: Calculate rectangular size 
+  geometry_msgs::Point32 slow_point, stop_point;
+  slow_point.z = 0.0;
+  stop_point.z = 0.0;
+  // top right 
+  slow_point.x = innerLength / 2;
+  stop_point.x = outerLength / 2;
+  slow_point.y = innerWidth / 2;
+  stop_point.y = outerWidth / 2;  
+  slowzone.polygon.points.push_back(slow_point);
+  stopzone.polygon.points.push_back(stop_point);
+  // top left 
+  slow_point.x = -innerLength / 2;
+  stop_point.x = -outerLength / 2;
+  slow_point.y = innerWidth / 2;
+  stop_point.y = outerWidth / 2;  
+  slowzone.polygon.points.push_back(slow_point);
+  stopzone.polygon.points.push_back(stop_point);
+    // bottom left 
+  slow_point.x = -innerLength / 2;
+  stop_point.x = -outerLength / 2;
+  slow_point.y = -innerWidth / 2;
+  stop_point.y = -outerWidth / 2;  
+  slowzone.polygon.points.push_back(slow_point);
+  stopzone.polygon.points.push_back(stop_point);
+  // bottom right 
+  slow_point.x = innerLength / 2;
+  stop_point.x = outerLength / 2;
+  slow_point.y = -innerWidth / 2;
+  stop_point.y = -outerWidth / 2;  
+  slowzone.polygon.points.push_back(slow_point);
+  stopzone.polygon.points.push_back(stop_point);
+  slow_pub->publish(slowzone);
+  stop_pub->publish(stopzone);
+}
+
 
 int main(int argc, char **argv)
 {
@@ -109,12 +184,29 @@ int main(int argc, char **argv)
   ros::Publisher slowzone_pub = n.advertise<geometry_msgs::PolygonStamped>("/ti_base/slowzone", 1);
   ros::Publisher stopzone_pub = n.advertise<geometry_msgs::PolygonStamped>("/ti_base/stopzone", 1);
 
-  double outerLimit = 1.5; //radius in meters
-  double innerLimit = 1.0; //radius in meters
+  outerLimit = 1.5; //radius in meters
+  innerLimit = 1.0; //radius in meters
   double mapsClearTime = 7.5; //seconds
 
-  n2.getParam("slow_radius", outerLimit);
-  n2.getParam("stop_radius", innerLimit);
+  // get bubble shape
+  std::string shapeString;
+  SafetyBubbleShape bubbleShape;
+  n2.getParam("bubble_shape", shapeString);
+
+  // circular bubble
+  if (shapeString.compare("circular") == 0) {
+    shapeString = CIRCULAR;
+    n2.getParam("slow_radius", outerLimit);
+    n2.getParam("stop_radius", innerLimit);
+  } else if (shapeString.compare("rectangular") == 0) {
+    // rectangular bubble
+    shapeString = RECTANGULAR;
+    n2.getParam("inner_width", innerWidth);
+    n2.getParam("inner_length", innerLength);
+    n2.getParam("outer_width", outerWidth);
+    n2.getParam("outer_length", outerLength);
+  }
+  // set time for periodically clearing costmap
   n2.getParam("clear_costmap_period_secs", mapsClearTime);
     
 
@@ -129,28 +221,15 @@ int main(int argc, char **argv)
       double tempRobotX = robotX;
       double tempRobotY = robotY;
       stopFlag = false;
-      slowFlag = false;
-
-      // create polygons for zones
-      geometry_msgs::PolygonStamped slowzone;
-      geometry_msgs::PolygonStamped stopzone;
-      slowzone.header.frame_id = "slowzone";
-      stopzone.header.frame_id = "stopzone";
-      int numPoints = 12; // number of points for polygon
-      for (int i = 0; i < numPoints; ++i) {
-        double angle = i * ( 360.0 / (double) numPoints) * M_PI / 180.0;
-        geometry_msgs::Point32 slow_point, stop_point;
-        slow_point.z = 0.0;
-        stop_point.z = 0.0;
-        slow_point.x = cos(angle) * outerLimit;
-        slow_point.y = sin(angle) * outerLimit;
-        stop_point.x = cos(angle) * innerLimit;
-        stop_point.y = sin(angle) * innerLimit;
-        slowzone.polygon.points.push_back(slow_point);
-        stopzone.polygon.points.push_back(stop_point);
+      slowFlag = false; 
+      
+      if (bubbleShape == CIRCULAR)
+      {
+        publishCircularSafetyBubble(&slowzone_pub, &stopzone_pub);
+      } else if (bubbleShape == RECTANGULAR)
+      {
+        publishRectangularSafetyBubble(&slowzone_pub, &stopzone_pub);
       }
-      slowzone_pub.publish(slowzone);
-      stopzone_pub.publish(stopzone); 
 
       // calculate distance to objects
       for (int i = 0; i < gMsg.info.height; i++)
@@ -163,13 +242,19 @@ int main(int argc, char **argv)
           {
             double px = (i * gMsg.info.resolution) + gMsg.info.origin.position.x;
             double py = (j * gMsg.info.resolution) + gMsg.info.origin.position.y;
-            double dist = calculateDistance(tempRobotX, tempRobotY, py, px);
-            if (outerLimit > dist && dist > innerLimit)
+            if (bubbleShape == CIRCULAR) 
             {
-              slowFlag = true;
-            } else if (innerLimit >= dist)
+              double dist = calculateDistance(tempRobotX, tempRobotY, py, px);
+              if (outerLimit > dist && dist > innerLimit)
+              {
+                slowFlag = true;
+              } else if (innerLimit >= dist)
+              {
+                stopFlag = true;
+              }
+            } else if (bubbleShape == RECTANGULAR)
             {
-              stopFlag = true;
+              int temp = 3;
             }
           }
         }
