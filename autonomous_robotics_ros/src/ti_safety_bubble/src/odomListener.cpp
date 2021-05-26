@@ -3,11 +3,12 @@
 *
 * @brief
 * Subscribes to the global obstacle layers's costmap and footprint nodes, 
-* publishes velocities based on the .
+* publishes velocities (full/half/stop) according to bubble size and shape.
+* Clears the costmap every T secs by calling navigation's clear_costmaps service. 
 *
 * \par
 * NOTE:
-* (C) Copyright 2020 Texas Instruments, Inc.
+* (C) Copyright 2021 Texas Instruments, Inc.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -38,19 +39,27 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-enum SafetyBubbleShape {
-  RECTANGULAR,
-  CIRCULAR
-};
-
 #include <math.h>
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_srvs/Empty.h"
+#include "std_msgs/Float32.h"
 #include "nav_msgs/OccupancyGrid.h"
+#include "nav_msgs/Odometry.h"
 #include "geometry_msgs/PolygonStamped.h"
 #include "geometry_msgs/Point32.h"
 #include "geometry_msgs/Twist.h"
+#include "tf2_ros/transform_listener.h"
+
+enum SafetyBubbleShape {
+  RECTANGULAR=0,
+  CIRCULAR
+};
+
+struct Point2D {
+  double x;
+  double y;
+};
 
 double robotX, robotY;
 // radius for inner and outer bubbles
@@ -58,6 +67,7 @@ double innerLimit, outerLimit;
 // dimensions for rectangular bubbles 
 double innerWidth, innerLength, outerWidth, outerLength; 
 nav_msgs::OccupancyGrid gMsg;
+double yaw;
 
 /**
  * This callback receives the robot's polygon and calculates the center. 
@@ -92,11 +102,34 @@ void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 }
 
 /**
+ * This callback saves the orientation of the robot. 
+ */
+void orientationCallback(const std_msgs::Float32::ConstPtr& msg)
+{
+    yaw = (double) msg->data;
+    ROS_INFO("%f", yaw);
+}
+
+/**
  * Calculates the distance between p1 and p2.
  */ 
 double calculateDistance(double p1x, double p1y, double p2x, double p2y)
 {
   return sqrt(pow(p1x - p2x, 2) + pow(p1y - p2y, 2));
+}
+
+Point2D rotatePoint(Point2D point) {
+  double sinus = sin(yaw);
+  double cosinus = cos(yaw);
+  Point2D temp;
+
+  point.x = point.x - robotX;
+  point.y = point.y - robotY;
+  temp.x = point.x * cosinus - point.y * sinus;
+  temp.y = point.x * sinus + point.y * cosinus;
+  point.x = temp.x + robotX;
+  point.y = temp.y + robotY;
+  return point;
 }
 
 void publishCircularSafetyBubble(ros::Publisher *slow_pub, ros::Publisher *stop_pub)
@@ -134,31 +167,31 @@ void publishRectangularSafetyBubble(ros::Publisher *slow_pub, ros::Publisher *st
   slow_point.z = 0.0;
   stop_point.z = 0.0;
   // top right 
-  slow_point.x = innerLength / 2;
-  stop_point.x = outerLength / 2;
-  slow_point.y = innerWidth / 2;
-  stop_point.y = outerWidth / 2;  
+  slow_point.x = outerLength / 2;
+  stop_point.x = innerLength / 2;
+  slow_point.y = outerWidth / 2;
+  stop_point.y = innerWidth / 2;  
   slowzone.polygon.points.push_back(slow_point);
   stopzone.polygon.points.push_back(stop_point);
   // top left 
-  slow_point.x = -innerLength / 2;
-  stop_point.x = -outerLength / 2;
-  slow_point.y = innerWidth / 2;
-  stop_point.y = outerWidth / 2;  
+  slow_point.x = -outerLength / 2;
+  stop_point.x = -innerLength / 2;
+  slow_point.y = outerWidth / 2;
+  stop_point.y = innerWidth / 2;  
   slowzone.polygon.points.push_back(slow_point);
   stopzone.polygon.points.push_back(stop_point);
     // bottom left 
-  slow_point.x = -innerLength / 2;
-  stop_point.x = -outerLength / 2;
-  slow_point.y = -innerWidth / 2;
-  stop_point.y = -outerWidth / 2;  
+  slow_point.x = -outerLength / 2;
+  stop_point.x = -innerLength / 2;
+  slow_point.y = -outerWidth / 2;
+  stop_point.y = -innerWidth / 2;  
   slowzone.polygon.points.push_back(slow_point);
   stopzone.polygon.points.push_back(stop_point);
   // bottom right 
-  slow_point.x = innerLength / 2;
-  stop_point.x = outerLength / 2;
-  slow_point.y = -innerWidth / 2;
-  stop_point.y = -outerWidth / 2;  
+  slow_point.x = outerLength / 2;
+  stop_point.x = innerLength / 2;
+  slow_point.y = -outerWidth / 2;
+  stop_point.y = -innerWidth / 2;  
   slowzone.polygon.points.push_back(slow_point);
   stopzone.polygon.points.push_back(stop_point);
   slow_pub->publish(slowzone);
@@ -176,6 +209,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber footprintSub = n.subscribe("/move_base/global_costmap/footprint", 10, footprintCallback);
   ros::Subscriber mapSub = n.subscribe("/move_base/global_costmap/costmap", 10, mapCallback);
+  ros::Subscriber orientSub = n.subscribe("/ti_base/yaw", 10, orientationCallback);
 
   ros::ServiceClient client = n.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
   std_srvs::Empty srv;
@@ -192,19 +226,23 @@ int main(int argc, char **argv)
   std::string shapeString;
   SafetyBubbleShape bubbleShape;
   n2.getParam("bubble_shape", shapeString);
+  ROS_INFO("%s", shapeString.c_str());
 
   // circular bubble
   if (shapeString.compare("circular") == 0) {
-    shapeString = CIRCULAR;
+    bubbleShape = CIRCULAR;
     n2.getParam("slow_radius", outerLimit);
     n2.getParam("stop_radius", innerLimit);
   } else if (shapeString.compare("rectangular") == 0) {
     // rectangular bubble
-    shapeString = RECTANGULAR;
+    bubbleShape = RECTANGULAR;
     n2.getParam("inner_width", innerWidth);
     n2.getParam("inner_length", innerLength);
     n2.getParam("outer_width", outerWidth);
     n2.getParam("outer_length", outerLength);
+  } else {
+    ROS_ERROR("Bubble shape parameter not set, stopping safety bubble");
+    ros::shutdown();
   }
   // set time for periodically clearing costmap
   n2.getParam("clear_costmap_period_secs", mapsClearTime);
@@ -229,7 +267,7 @@ int main(int argc, char **argv)
       } else if (bubbleShape == RECTANGULAR)
       {
         publishRectangularSafetyBubble(&slowzone_pub, &stopzone_pub);
-      }
+      } 
 
       // calculate distance to objects
       for (int i = 0; i < gMsg.info.height; i++)
@@ -254,7 +292,17 @@ int main(int argc, char **argv)
               }
             } else if (bubbleShape == RECTANGULAR)
             {
-              int temp = 3;
+              Point2D point;
+              point.x = py;
+              point.y = px;
+              Point2D rotated = rotatePoint(point);
+              double diffWidth = abs(tempRobotX - rotated.x);
+              double diffLength = abs(tempRobotY - rotated.y);
+              if (innerLength >= diffLength && innerWidth >= diffWidth) {
+                stopFlag = true;
+              } else if (outerLength >= diffLength && outerWidth >= diffWidth) {
+                slowFlag = true;
+              }
             }
           }
         }

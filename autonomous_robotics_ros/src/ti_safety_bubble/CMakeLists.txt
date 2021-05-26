@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   geometry_msgs
+  tf2_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -209,3 +210,6 @@ include_directories(
 add_executable(odomListener src/odomListener.cpp)
 target_link_libraries(odomListener ${catkin_LIBRARIES})
 add_dependencies(odomListener ti_safety_bubble_generate_messages_cpp)
+
+add_executable(orientation src/orientation.cpp)
+target_link_libraries(orientation ${catkin_LIBRARIES})

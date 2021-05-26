@@ -1,0 +1,16 @@
+<launch>
+  <node pkg="tf" type="static_transform_publisher" name="slow_tf" args="0 0 0 0 0 0 base_link slowzone 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="stop_tf" args="0 0 0 0 0 0 base_link stopzone 100"/>
+
+  <node name="odomListener" pkg="ti_safety_bubble" type="odomListener" output="screen" >
+    <param name="bubble_shape" value="rectangular" />
+    <param name="outer_length" value="2.5" />
+    <param name="outer_width" value="1.5" />
+    <param name="inner_length" value="1.5" />
+    <param name="inner_width" value="0.75" />
+    <param name="clear_costmap_period_secs" value="5" />
+  </node>
+
+  <node name="orientation" pkg="ti_safety_bubble" type="orientation" output="screen" >
+  </node>
+</launch>
