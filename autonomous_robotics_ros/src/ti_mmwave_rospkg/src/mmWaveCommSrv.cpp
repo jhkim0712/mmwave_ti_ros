@@ -53,11 +53,12 @@ void mmWaveCommSrv::onInit()
     private_nh2.getParam("command_port", mySerialPort);
     
     private_nh2.getParam("command_rate", myBaudRate);
+    private_nh2.getParam("mmWaveCLI_name", mmWaveCLIName);
     
     ROS_INFO("mmWaveCommSrv: command_port = %s", mySerialPort.c_str());
     ROS_INFO("mmWaveCommSrv: command_rate = %d", myBaudRate);
     
-    commSrv = private_nh.advertiseService("/mmWaveCLI", &mmWaveCommSrv::commSrv_cb, this);
+    commSrv = private_nh.advertiseService(mmWaveCLIName, &mmWaveCommSrv::commSrv_cb, this);
     
     NODELET_DEBUG("mmWaveCommsrv: Finished onInit function");
 }
