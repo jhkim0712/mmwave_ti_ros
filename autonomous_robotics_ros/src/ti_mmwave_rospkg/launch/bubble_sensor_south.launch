@@ -19,11 +19,14 @@
     <param name="max_allowed_elevation_angle_deg" value="$(arg max_allowed_elevation_angle_deg)"   />
     <param name="max_allowed_azimuth_angle_deg" value="$(arg max_allowed_azimuth_angle_deg)"   />
     <param name="frame_id" value="ti_mmwave_2"/>
+    <param name="mmWaveCLI_name" value="/mmWaveCLI_2" />
     <remap from="/ti_mmwave/radar_scan_pcl" to="/ti_mmwave/radar_scan_pcl_2"/>
   </node>
 
   <!-- mmWaveQuickConfig node (terminates after configuring mmWave sensor) -->
-  <node pkg="ti_mmwave_rospkg" type="mmWaveQuickConfig" name="ti_mmwave_config" ns="radar_2" args="$(find ti_mmwave_rospkg)/cfg/$(arg device)_$(arg config).cfg" output="screen" />
+  <node pkg="ti_mmwave_rospkg" type="mmWaveQuickConfig" name="ti_mmwave_config" ns="radar_2" args="$(find ti_mmwave_rospkg)/cfg/$(arg device)_$(arg config).cfg" output="screen" >
+    <param name="mmWaveCLI_name" value="/mmWaveCLI_2" />
+  </node>
 
   <node pkg="tf" type="static_transform_publisher" name="radar_baselink_2" args="-.19 0 0.18 3.14 0 3.14 base_link ti_mmwave_2 100"/>
 
