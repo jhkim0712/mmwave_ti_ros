@@ -107,7 +107,6 @@ void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 void orientationCallback(const std_msgs::Float32::ConstPtr& msg)
 {
     yaw = (double) msg->data;
-    ROS_INFO("%f", yaw);
 }
 
 /**
@@ -296,11 +295,11 @@ int main(int argc, char **argv)
               point.x = py;
               point.y = px;
               Point2D rotated = rotatePoint(point);
-              double diffWidth = abs(tempRobotX - rotated.x);
-              double diffLength = abs(tempRobotY - rotated.y);
-              if (innerLength >= diffLength && innerWidth >= diffWidth) {
+              double diffLength = abs(tempRobotX - rotated.x);
+              double diffWidth = abs(tempRobotY - rotated.y);
+              if (innerLength/2 >= diffLength && innerWidth/2 >= diffWidth) {
                 stopFlag = true;
-              } else if (outerLength >= diffLength && outerWidth >= diffWidth) {
+              } else if (outerLength/2 >= diffLength && outerWidth/2 >= diffWidth) {
                 slowFlag = true;
               }
             }
