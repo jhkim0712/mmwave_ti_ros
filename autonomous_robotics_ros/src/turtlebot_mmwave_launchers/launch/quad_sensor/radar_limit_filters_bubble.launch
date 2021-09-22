@@ -32,8 +32,8 @@
       <remap from="~output" to="xyz_filt_out_0" />
       <rosparam>
          filter_field_name: z
-         filter_limit_min: -0.4
-         filter_limit_max: 0.10
+         filter_limit_min: -0.5
+         filter_limit_max: -0.1
          filter_limit_negative: False
       </rosparam>
    </node>
@@ -76,8 +76,8 @@
       <remap from="~output" to="xyz_filt_out_1" />
       <rosparam>
          filter_field_name: z
-         filter_limit_min: -0.4
-         filter_limit_max: 0.10
+         filter_limit_min: -0.5
+         filter_limit_max: -0.1
          filter_limit_negative: False
       </rosparam>
    </node>
@@ -120,8 +120,8 @@
       <remap from="~output" to="xyz_filt_out_2" />
       <rosparam>
          filter_field_name: z
-         filter_limit_min: -0.4
-         filter_limit_max: 0.10
+         filter_limit_min: -0.5
+         filter_limit_max: -0.1
          filter_limit_negative: False
       </rosparam>
    </node>
@@ -164,8 +164,8 @@
       <remap from="~output" to="xyz_filt_out_3" />
       <rosparam>
          filter_field_name: z
-         filter_limit_min: -0.4
-         filter_limit_max: 0.10
+         filter_limit_min: -0.5
+         filter_limit_max: -0.1
          filter_limit_negative: False
       </rosparam>
    </node>
