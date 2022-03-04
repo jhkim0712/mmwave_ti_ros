@@ -1,5 +1,5 @@
 <!--
-  This file will launch the mmWave sensor node and configure a TI mmWave 6843 sensor using a 3D config. This launch file is intended
+  This file will launch four instances of the mmWave sensor node and configure each TI mmWave 6843 sensor using a 3D config. This launch file is intended
   to be used to launch the mmWave sensor node on TI's TDA4VM Jacinto Processors, as such a separate command must be used to launch rViz 
   for visualization on a PC.
  -->
@@ -15,20 +15,26 @@
 
   <include file="$(find ti_mmwave_rospkg)/launch/6843_3d_TDA4VM.launch">
     <arg name="device_num" value="1" />
-    <arg name="tf_args" value="5 5 0 0 0 0" />
+    <arg name="tf_args" value="0 0 0 0 0 0" />
     <arg name="com_user" value="/dev/ttyUSB2"/>
     <arg name="com_data" value="/dev/ttyUSB3"/>
-    <arg name="node_start_delay" value="20"/>
-  </include>
-
-<!--
-  <include file="$(find ti_mmwave_rospkg)/launch/6843_3d_TDA4VM.launch">
-    <arg name="tf_args" value="-5 5 0 0 0 0 ti_mmwave_pcl ti_mmwave_2 100" />
+    <arg name="node_start_delay" value="2"/>
   </include>
 
   <include file="$(find ti_mmwave_rospkg)/launch/6843_3d_TDA4VM.launch">
-    <arg name="tf_args" value="0 10 0 0 0 0 ti_mmwave_pcl ti_mmwave_3 100" />
+    <arg name="device_num" value="2" />
+    <arg name="tf_args" value="0 0 0 0 0 0" />
+    <arg name="com_user" value="/dev/ttyUSB4"/>
+    <arg name="com_data" value="/dev/ttyUSB5"/>
+    <arg name="node_start_delay" value="4"/>
   </include>
--->
+
+  <include file="$(find ti_mmwave_rospkg)/launch/6843_3d_TDA4VM.launch">
+    <arg name="device_num" value="3" />
+    <arg name="tf_args" value="0 0 0 0 0 0" />
+    <arg name="com_user" value="/dev/ttyUSB6"/>
+    <arg name="com_data" value="/dev/ttyUSB7"/>
+    <arg name="node_start_delay" value="6"/>
+  </include>
   
 </launch>
