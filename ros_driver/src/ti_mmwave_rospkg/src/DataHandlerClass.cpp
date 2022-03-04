@@ -155,13 +155,6 @@ void *DataUARTHandler::readIncomingData(void)
     
     while(ros::ok())
     {
-        if(stop_threads)
-        {
-            pthread_mutex_unlock(&nextBufp_mutex);
-            pthread_mutex_unlock(&countSync_mutex);
-            pthread_cond_signal(&countSync_max_cv);
-            pthread_exit(NULL);
-        }
         /*Start reading UART data and writing to buffer while also checking for magicWord*/
         last8Bytes[0] = last8Bytes[1];
         last8Bytes[1] = last8Bytes[2];
@@ -314,14 +307,6 @@ void *DataUARTHandler::sortIncomingData( void )
     
     while(ros::ok())
     {
-        
-        if(stop_threads)
-        {
-            pthread_mutex_unlock(&currentBufp_mutex);
-            pthread_mutex_unlock(&countSync_mutex);
-            pthread_cond_signal(&countSync_max_cv);
-            pthread_exit(NULL);
-        }
 
         switch(sorterState)
         {
@@ -830,6 +815,7 @@ void DataUARTHandler::start(void)
     sigset_t set;
     int s;
 
+    /* Block SIGINT on main thread and subsequently created threads */
     sigemptyset(&set);
     sigaddset(&set, SIGINT);
     s = pthread_sigmask(SIG_BLOCK, &set, NULL);
@@ -865,25 +851,21 @@ void DataUARTHandler::start(void)
         ros::shutdown();
     }
 
+    /* Unlock SIGINT on main thread */
     s = pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 
     signal(SIGINT, sigHandler);
     
-    ros::Rate r(10); // 10 hz
-    while(!stop_threads)
-    {
-        ros::spinOnce();
-        r.sleep();
-    }
+    ros::spin();
 
     pthread_join(uartThread, NULL);
-    ROS_DEBUG("DataUARTHandler Read Thread joined");
+    ROS_INFO("DataUARTHandler Read Thread joined");
 
     pthread_join(sorterThread, NULL);
-    ROS_DEBUG("DataUARTHandler Sort Thread joined");
+    ROS_INFO("DataUARTHandler Sort Thread joined");
 
     pthread_join(swapThread, NULL);
-    ROS_DEBUG("DataUARTHandler Swap Thread joined");
+    ROS_INFO("DataUARTHandler Swap Thread joined");
 
     pthread_mutex_destroy(&countSync_mutex);
     pthread_mutex_destroy(&nextBufp_mutex);
@@ -891,8 +873,6 @@ void DataUARTHandler::start(void)
     pthread_cond_destroy(&countSync_max_cv);
     pthread_cond_destroy(&read_go_cv);
     pthread_cond_destroy(&sort_go_cv);
-
-    ros::shutdown();
 }
 
 void* DataUARTHandler::readIncomingData_helper(void *context)
@@ -946,6 +926,7 @@ void DataUARTHandler::stop()
     ROS_DEBUG("Stopping Threads");
 
     stop_threads = true;
+    ros::shutdown();
     
     pthread_cond_signal(&read_go_cv);
     pthread_cond_signal(&sort_go_cv);

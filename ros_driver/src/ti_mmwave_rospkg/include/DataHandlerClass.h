@@ -98,7 +98,7 @@ private:
     /*Mutex protected variable which synchronizes threads*/
     int countSync;
 
-    /*Boolean used by signal handling thread to notify other threads to exit*/
+    /*Boolean used to notify threads to exit*/
     bool stop_threads;
     
     /*Read/Write Buffers*/
