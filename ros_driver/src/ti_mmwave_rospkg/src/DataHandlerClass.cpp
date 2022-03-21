@@ -406,6 +406,7 @@ void *DataUARTHandler::sortIncomingData( void )
             // RScan->header.seq = 0;
             // RScan->header.stamp = (uint64_t)(ros::Time::now());
             // RScan->header.stamp = (uint32_t) mmwData.header.timeCpuCycles;
+            pcl_conversions::toPCL(ros::Time::now(), RScan->header.stamp);
             RScan->header.frame_id = frameID;
             RScan->height = 1;
             RScan->width = mmwData.numObjOut;
@@ -696,9 +697,8 @@ void *DataUARTHandler::sortIncomingData( void )
                     
                     //ROS_INFO("mmwData.numObjOut after = %d", mmwData.numObjOut);
                     //ROS_INFO("DataUARTHandler Sort Thread: number of obj = %d", mmwData.numObjOut );
-                    
-                    DataUARTHandler_pub.publish(RScan);
                 }
+                DataUARTHandler_pub.publish(RScan);
 
                 //ROS_INFO("DataUARTHandler Sort Thread : CHECK_TLV_TYPE state says tlvCount max was reached, going to switch buffer state");
                 sorterState = SWAP_BUFFERS;
