@@ -76,6 +76,8 @@ class mmWaveCommSrv : public nodelet::Nodelet
    std::string mySerialPort;
    
    int myBaudRate;
+
+   std::string mmWaveCLIName;
 }; //Class mmWaveCommSrv 
 
 } //namespace ti_mmwave_rospkg 
