@@ -7,6 +7,19 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 
+DataUARTHandler* gDataHandlerPtr;
+
+void DataUARTHandler::sigHandler(int32_t sig)
+{
+    switch(sig)
+    {
+    case SIGINT:
+        gDataHandlerPtr->stop();
+
+    }
+    
+}
+
 struct mmWaveCloudType
 {
     PCL_ADD_POINT4D;
@@ -54,6 +67,10 @@ DataUARTHandler::DataUARTHandler(ros::NodeHandle* nh) : currentBufp(&pingPongBuf
 
     ROS_INFO("\n\n==============================\nList of parameters\n==============================\nNumber of range samples: %d\nNumber of chirps: %d\nf_s: %.3f MHz\nf_c: %.3f GHz\nBandwidth: %.3f MHz\nPRI: %.3f us\nFrame time: %.3f ms\nMax range: %.3f m\nRange resolution: %.3f m\nMax Doppler: +-%.3f m/s\nDoppler resolution: %.3f m/s\n==============================\n", \
         nr, nd, fs/1e6, fc/1e9, BW/1e6, PRI*1e6, tfr*1e3, max_range, vrange, max_vel/2, vvel);
+
+    gDataHandlerPtr = this;
+
+    stop_threads = false;
 }
 
 void DataUARTHandler::setFrameID(char* myFrameID)
@@ -228,8 +245,16 @@ void *DataUARTHandler::syncedBufferSwap(void)
     
         while(countSync < COUNT_SYNC_MAX)
         {
+            if(stop_threads)
+            {
+                pthread_mutex_unlock(&countSync_mutex);
+                pthread_cond_signal(&sort_go_cv);
+                pthread_cond_signal(&read_go_cv);
+                pthread_exit(NULL);
+            }
+
             pthread_cond_wait(&countSync_max_cv, &countSync_mutex);
-            
+
             pthread_mutex_lock(&currentBufp_mutex);
             pthread_mutex_lock(&nextBufp_mutex);
             
@@ -282,7 +307,7 @@ void *DataUARTHandler::sortIncomingData( void )
     
     while(ros::ok())
     {
-        
+
         switch(sorterState)
         {
             
@@ -381,6 +406,7 @@ void *DataUARTHandler::sortIncomingData( void )
             // RScan->header.seq = 0;
             // RScan->header.stamp = (uint64_t)(ros::Time::now());
             // RScan->header.stamp = (uint32_t) mmwData.header.timeCpuCycles;
+            pcl_conversions::toPCL(ros::Time::now(), RScan->header.stamp);
             RScan->header.frame_id = frameID;
             RScan->height = 1;
             RScan->width = mmwData.numObjOut;
@@ -671,9 +697,8 @@ void *DataUARTHandler::sortIncomingData( void )
                     
                     //ROS_INFO("mmwData.numObjOut after = %d", mmwData.numObjOut);
                     //ROS_INFO("DataUARTHandler Sort Thread: number of obj = %d", mmwData.numObjOut );
-                    
-                    DataUARTHandler_pub.publish(RScan);
                 }
+                DataUARTHandler_pub.publish(RScan);
 
                 //ROS_INFO("DataUARTHandler Sort Thread : CHECK_TLV_TYPE state says tlvCount max was reached, going to switch buffer state");
                 sorterState = SWAP_BUFFERS;
@@ -782,10 +807,18 @@ void *DataUARTHandler::sortIncomingData( void )
 
 void DataUARTHandler::start(void)
 {
-    
+
     pthread_t uartThread, sorterThread, swapThread;
-    
+
     int  iret1, iret2, iret3;
+
+    sigset_t set;
+    int s;
+
+    /* Block SIGINT on main thread and subsequently created threads */
+    sigemptyset(&set);
+    sigaddset(&set, SIGINT);
+    s = pthread_sigmask(SIG_BLOCK, &set, NULL);
     
     pthread_mutex_init(&countSync_mutex, NULL);
     pthread_mutex_init(&nextBufp_mutex, NULL);
@@ -817,24 +850,29 @@ void DataUARTHandler::start(void)
         ROS_INFO("Error - pthread_create() return code: %d\n",iret1);
         ros::shutdown();
     }
+
+    /* Unlock SIGINT on main thread */
+    s = pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+
+    signal(SIGINT, sigHandler);
     
     ros::spin();
 
-    pthread_join(iret1, NULL);
+    pthread_join(uartThread, NULL);
     ROS_INFO("DataUARTHandler Read Thread joined");
-    pthread_join(iret2, NULL);
+
+    pthread_join(sorterThread, NULL);
     ROS_INFO("DataUARTHandler Sort Thread joined");
-    pthread_join(iret3, NULL);
+
+    pthread_join(swapThread, NULL);
     ROS_INFO("DataUARTHandler Swap Thread joined");
-    
+
     pthread_mutex_destroy(&countSync_mutex);
     pthread_mutex_destroy(&nextBufp_mutex);
     pthread_mutex_destroy(&currentBufp_mutex);
     pthread_cond_destroy(&countSync_max_cv);
     pthread_cond_destroy(&read_go_cv);
     pthread_cond_destroy(&sort_go_cv);
-    
-    
 }
 
 void* DataUARTHandler::readIncomingData_helper(void *context)
@@ -881,4 +919,16 @@ void DataUARTHandler::visualize(const ti_mmwave_rospkg::RadarScan &msg){
     marker.color.b = 1;
 
     marker_pub.publish(marker);
+}
+
+void DataUARTHandler::stop()
+{
+    ROS_DEBUG("Stopping Threads");
+
+    stop_threads = true;
+    ros::shutdown();
+    
+    pthread_cond_signal(&read_go_cv);
+    pthread_cond_signal(&sort_go_cv);
+    pthread_cond_signal(&countSync_max_cv);
 }
