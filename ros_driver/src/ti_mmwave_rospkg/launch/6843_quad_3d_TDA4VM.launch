@@ -11,6 +11,7 @@
     <arg name="tf_args" value="0 0 0 0 0 0" />
     <arg name="com_user" value="/dev/ttyUSB0"/>
     <arg name="com_data" value="/dev/ttyUSB1"/>
+    <arg name="node_start_delay" value="0"/>
   </include>
 
   <include file="$(find ti_mmwave_rospkg)/launch/6843_3d_TDA4VM.launch">
@@ -18,7 +19,7 @@
     <arg name="tf_args" value="0 0 0 0 0 0" />
     <arg name="com_user" value="/dev/ttyUSB2"/>
     <arg name="com_data" value="/dev/ttyUSB3"/>
-    <arg name="node_start_delay" value="2"/>
+    <arg name="node_start_delay" value="0"/>
   </include>
 
   <include file="$(find ti_mmwave_rospkg)/launch/6843_3d_TDA4VM.launch">
@@ -26,7 +27,7 @@
     <arg name="tf_args" value="0 0 0 0 0 0" />
     <arg name="com_user" value="/dev/ttyUSB4"/>
     <arg name="com_data" value="/dev/ttyUSB5"/>
-    <arg name="node_start_delay" value="4"/>
+    <arg name="node_start_delay" value="0"/>
   </include>
 
   <include file="$(find ti_mmwave_rospkg)/launch/6843_3d_TDA4VM.launch">
@@ -34,7 +35,7 @@
     <arg name="tf_args" value="0 0 0 0 0 0" />
     <arg name="com_user" value="/dev/ttyUSB6"/>
     <arg name="com_data" value="/dev/ttyUSB7"/>
-    <arg name="node_start_delay" value="6"/>
+    <arg name="node_start_delay" value="0"/>
   </include>
   
 </launch>
