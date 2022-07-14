@@ -220,6 +220,10 @@ add_executable(mmWaveQuickConfig src/mmWaveQuickConfig.cpp)
 target_link_libraries(mmWaveQuickConfig ${catkin_LIBRARIES} mmwave ${PCL_LIBRARIES})
 add_dependencies(mmWaveQuickConfig ${catkin_EXPORTED_TARGETS} mmwave)
 
+add_executable(mmWaveSync src/mmWaveSync.cpp)
+target_link_libraries(mmWaveSync ${catkin_LIBRARIES} mmwave ti_gpio)
+add_dependencies(mmWaveSync ${catkin_EXPORTED_TARGETS} mmwave)
+
 #############
 ## Testing ##
 #############
