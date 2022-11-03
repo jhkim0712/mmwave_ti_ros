@@ -1,8 +1,10 @@
-#ifndef _DATA_HANDLER_CLASS_
+ #ifndef _DATA_HANDLER_CLASS_
 #define _DATA_HANDLER_CLASS_
 
-#include <ti_mmwave_rospkg/RadarScan.h>
-#include <ti_mmwave_rospkg/RadarOccupancy.h>
+#include <ti_mmwave_tracker_rospkg/RadarScan.h>
+#include <ti_mmwave_tracker_rospkg/RadarPointTrackID.h>
+#include <ti_mmwave_tracker_rospkg/RadarTrackArray.h>
+#include <ti_mmwave_tracker_rospkg/RadarTrackContents.h>
 #include "mmWave.h"
 #include <iostream>
 #include <cstdio>
@@ -80,12 +82,6 @@ private:
     float vrange;
     float max_vel;
     float vvel;
-    float zminx;
-    float zmaxx;
-    float zminy;
-    float zmaxy;
-    float zminz;
-    float zmaxz;
 
     char* frameID;
     /*Contains the name of the serial port*/
@@ -147,14 +143,15 @@ private:
     /*Sort incoming UART Data Thread*/
     void *sortIncomingData(void);
     
-    void visualize(const ti_mmwave_rospkg::RadarScan &msg);
+    void visualize(const ti_mmwave_tracker_rospkg::RadarScan &msg);
 
     ros::NodeHandle* nodeHandle;
     
     ros::Publisher DataUARTHandler_pub;
     ros::Publisher radar_scan_pub;
+    ros::Publisher radar_trackid_pub;
+    ros::Publisher radar_trackarray_pub;
     ros::Publisher marker_pub;
-    ros::Publisher radar_occupancy_pub;
 };
 
 #endif 

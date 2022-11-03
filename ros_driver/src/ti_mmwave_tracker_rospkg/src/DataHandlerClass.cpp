@@ -43,10 +43,16 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (mmWaveCloudType,
                                     (float, velocity, velocity))
 
 DataUARTHandler::DataUARTHandler(ros::NodeHandle* nh) : currentBufp(&pingPongBuffers[0]) , nextBufp(&pingPongBuffers[1]) {
+
+    // Make sure to add ALL publishers below to DataHandlerClass.h as an include at the top
+    // File will be generated during catkin_make, use existing publishers to understand syntax
+  
     DataUARTHandler_pub = nh->advertise<sensor_msgs::PointCloud2>("/ti_mmwave/radar_scan_pcl", 100);
-    radar_scan_pub = nh->advertise<ti_mmwave_rospkg::RadarScan>("/ti_mmwave/radar_scan", 100);
-    radar_occupancy_pub = nh->advertise<ti_mmwave_rospkg::RadarOccupancy>("/ti_mmwave/radar_occupancy", 100);
+    radar_scan_pub = nh->advertise<ti_mmwave_tracker_rospkg::RadarScan>("/ti_mmwave/radar_scan", 100);
+    radar_trackid_pub = nh->advertise<ti_mmwave_tracker_rospkg::RadarPointTrackID>("/ti_mmwave/radar_trackid", 100);
+    radar_trackarray_pub = nh->advertise<ti_mmwave_tracker_rospkg::RadarTrackArray>("/ti_mmwave/radar_trackarray", 100);
     marker_pub = nh->advertise<visualization_msgs::Marker>("/ti_mmwave/radar_scan_markers", 100);
+    
     maxAllowedElevationAngleDeg = 90; // Use max angle if none specified
     maxAllowedAzimuthAngleDeg = 90; // Use max angle if none specified
 
@@ -65,13 +71,7 @@ DataUARTHandler::DataUARTHandler(ros::NodeHandle* nh) : currentBufp(&pingPongBuf
     nh->getParam("/ti_mmwave/range_resolution", vrange);
     nh->getParam("/ti_mmwave/max_doppler_vel", max_vel);
     nh->getParam("/ti_mmwave/doppler_vel_resolution", vvel);
-    nh->getParam("/ti_mmwave/zoneMinX", zminx);
-    nh->getParam("/ti_mmwave/zoneMaxX", zmaxx);
-    nh->getParam("/ti_mmwave/zoneMinY", zminy);
-    nh->getParam("/ti_mmwave/zoneMaxY", zmaxy);
-    nh->getParam("/ti_mmwave/zoneMinZ", zminz);
-    nh->getParam("/ti_mmwave/zoneMaxZ", zmaxz);
-    
+
     ROS_INFO("\n\n==============================\nList of parameters\n==============================\nNumber of range samples: %d\nNumber of chirps: %d\nf_s: %.3f MHz\nf_c: %.3f GHz\nBandwidth: %.3f MHz\nPRI: %.3f us\nFrame time: %.3f ms\nMax range: %.3f m\nRange resolution: %.3f m\nMax Doppler: +-%.3f m/s\nDoppler resolution: %.3f m/s\n==============================\n", \
         nr, nd, fs/1e6, fc/1e9, BW/1e6, PRI*1e6, tfr*1e3, max_range, vrange, max_vel/2, vvel);
 
@@ -300,16 +300,24 @@ void *DataUARTHandler::sortIncomingData( void )
     int j = 0;
     float maxElevationAngleRatioSquared;
     float maxAzimuthAngleRatio;
+    float realElevation;
+    float realAzimuth;
+    float realDoppler;
+    float realRange;
+    float realSNR;
     
     //boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI>> RScan(new pcl::PointCloud<pcl::PointXYZI>);
     boost::shared_ptr<pcl::PointCloud<mmWaveCloudType>> RScan(new pcl::PointCloud<mmWaveCloudType>);
-    ti_mmwave_rospkg::RadarScan radarscan;
-    ti_mmwave_rospkg::RadarOccupancy radaroccupancy;
+    ti_mmwave_tracker_rospkg::RadarScan radarscan;
+    ti_mmwave_tracker_rospkg::RadarPointTrackID radartrackid;
+    ti_mmwave_tracker_rospkg::RadarTrackArray radartrackarray;
+    ti_mmwave_tracker_rospkg::RadarTrackContents radartrackcontents;
 
     //wait for first packet to arrive
     pthread_mutex_lock(&countSync_mutex);
     pthread_cond_wait(&sort_go_cv, &countSync_mutex);
     pthread_mutex_unlock(&countSync_mutex);
+    
     pthread_mutex_lock(&currentBufp_mutex);
     
     while(ros::ok())
@@ -319,7 +327,7 @@ void *DataUARTHandler::sortIncomingData( void )
         {
             
         case READ_HEADER:
-            
+                  
             //init variables
             mmwData.numObjOut = 0;
 
@@ -388,31 +396,13 @@ void *DataUARTHandler::sortIncomingData( void )
 
             break;
             
-        case READ_OBJ_STRUCT:
-            
-            // CHECK_TLV_TYPE code has already read tlvType and tlvLen
+        case READ_SPHERE_POINT_CLOUD:
 
+	  // CHECK_TLV_TYPE code has already read tlvType and tlvLen
             i = 0;
             offset = 0;
             
-            if (((mmwData.header.version >> 24) & 0xFF) < 3)  // SDK version is older than 3.x
-            {
-                //get number of objects
-                memcpy( &mmwData.numObjOut, &currentBufp->at(currentDatap), sizeof(mmwData.numObjOut));
-                currentDatap += ( sizeof(mmwData.numObjOut) );
-            
-                //get xyzQFormat
-                memcpy( &mmwData.xyzQFormat, &currentBufp->at(currentDatap), sizeof(mmwData.xyzQFormat));
-                currentDatap += ( sizeof(mmwData.xyzQFormat) );
-            }
-            else  // SDK version is at least 3.x
-            {
-                mmwData.numObjOut = mmwData.header.numDetectedObj;
-            }
-            
-            // RScan->header.seq = 0;
-            // RScan->header.stamp = (uint64_t)(ros::Time::now());
-            // RScan->header.stamp = (uint32_t) mmwData.header.timeCpuCycles;
+            mmwData.numObjOut = mmwData.header.numDetectedObj;	    
             pcl_conversions::toPCL(ros::Time::now(), RScan->header.stamp);
             RScan->header.frame_id = frameID;
             RScan->height = 1;
@@ -428,270 +418,232 @@ void *DataUARTHandler::sortIncomingData( void )
             if ((maxAllowedAzimuthAngleDeg >= 0) && (maxAllowedAzimuthAngleDeg < 90)) maxAzimuthAngleRatio = tan(maxAllowedAzimuthAngleDeg * M_PI / 180.0);
             else maxAzimuthAngleRatio = -1;
 
-            //ROS_INFO("maxElevationAngleRatioSquared = %f", maxElevationAngleRatioSquared);
-            //ROS_INFO("maxAzimuthAngleRatio = %f", maxAzimuthAngleRatio);
-            //ROS_INFO("mmwData.numObjOut before = %d", mmwData.numObjOut);
+	    //get object Elevation unit (rad)
+            memcpy( &mmwData.newSphereCloudOut.elevationUnit, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.elevationUnit));
+            currentDatap += ( sizeof(mmwData.newSphereCloudOut.elevationUnit) );
+                
+            //get object Azimuth unit (rad)
+            memcpy( &mmwData.newSphereCloudOut.azimuthUnit, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.azimuthUnit));
+            currentDatap += ( sizeof(mmwData.newSphereCloudOut.azimuthUnit) );
+                
+            //get object Doppler unit (m/s)
+            memcpy( &mmwData.newSphereCloudOut.dopplerUnit, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.dopplerUnit));
+            currentDatap += ( sizeof(mmwData.newSphereCloudOut.dopplerUnit) );
+                
+            //get object Range unit (meters)
+            memcpy( &mmwData.newSphereCloudOut.rangeUnit, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.rangeUnit));
+            currentDatap += ( sizeof(mmwData.newSphereCloudOut.rangeUnit) );
 
-            // Populate pointcloud
+	       //get object SNR unit (ratio)
+            memcpy( &mmwData.newSphereCloudOut.snrUnit, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.snrUnit));
+            currentDatap += ( sizeof(mmwData.newSphereCloudOut.snrUnit) );
+
             while( i < mmwData.numObjOut ) {
-                if (((mmwData.header.version >> 24) & 0xFF) < 3) { // SDK version is older than 3.x
-                    //get object range index
-                    memcpy( &mmwData.objOut.rangeIdx, &currentBufp->at(currentDatap), sizeof(mmwData.objOut.rangeIdx));
-                    currentDatap += ( sizeof(mmwData.objOut.rangeIdx) );
-                    
-                    //get object doppler index
-                    memcpy( &mmwData.objOut.dopplerIdx, &currentBufp->at(currentDatap), sizeof(mmwData.objOut.dopplerIdx));
-                    currentDatap += ( sizeof(mmwData.objOut.dopplerIdx) );
-                    
-                    //get object peak intensity value
-                    memcpy( &mmwData.objOut.peakVal, &currentBufp->at(currentDatap), sizeof(mmwData.objOut.peakVal));
-                    currentDatap += ( sizeof(mmwData.objOut.peakVal) );
-                    
-                    //get object x-coordinate
-                    memcpy( &mmwData.objOut.x, &currentBufp->at(currentDatap), sizeof(mmwData.objOut.x));
-                    currentDatap += ( sizeof(mmwData.objOut.x) );
-                    
-                    //get object y-coordinate
-                    memcpy( &mmwData.objOut.y, &currentBufp->at(currentDatap), sizeof(mmwData.objOut.y));
-                    currentDatap += ( sizeof(mmwData.objOut.y) );
-                    
-                    //get object z-coordinate
-                    memcpy( &mmwData.objOut.z, &currentBufp->at(currentDatap), sizeof(mmwData.objOut.z));
-                    currentDatap += ( sizeof(mmwData.objOut.z) );
-                    
-                    float temp[7];
-                    
-                    temp[0] = (float) mmwData.objOut.x;
-                    temp[1] = (float) mmwData.objOut.y;
-                    temp[2] = (float) mmwData.objOut.z;
-                    temp[3] = (float) mmwData.objOut.dopplerIdx;
 
-                    for (int j = 0; j < 4; j++) {
-                        if (temp[j] > 32767) temp[j] -= 65536;
-                        if (j < 3) temp[j] = temp[j] / pow(2 , mmwData.xyzQFormat);
-                    }   
-                    
-                    temp[7] = temp[3] * vvel;
-
-                    temp[4] = (float) mmwData.objOut.rangeIdx * vrange;
-                    temp[5] = 10 * log10(mmwData.objOut.peakVal + 1);  // intensity
-                    temp[6] = std::atan2(-temp[0], temp[1]) / M_PI * 180;
-                    
-                    uint16_t tmp = (uint16_t)(temp[3] + nd / 2);
-
-                    // Map mmWave sensor coordinates to ROS coordinate system
-                    RScan->points[i].x = temp[1];   // ROS standard coordinate system X-axis is forward which is the mmWave sensor Y-axis
-                    RScan->points[i].y = -temp[0];  // ROS standard coordinate system Y-axis is left which is the mmWave sensor -(X-axis)
-                    RScan->points[i].z = temp[2];   // ROS standard coordinate system Z-axis is up which is the same as mmWave sensor Z-axis
-                    RScan->points[i].intensity = temp[5];
-                    
-                    radarscan.header.frame_id = frameID;
-                    radarscan.header.stamp = ros::Time::now();
-
-                    radarscan.point_id = i;
-                    radarscan.x = temp[1];
-                    radarscan.y = -temp[0];
-                    radarscan.z = temp[2];
-                    radarscan.range = temp[4];
-                    radarscan.velocity = temp[7];
-                    radarscan.doppler_bin = tmp;
-                    radarscan.bearing = temp[6];
-                    radarscan.intensity = temp[5];
-                } else { // SDK version is 3.x+
-                    //get object x-coordinate (meters)
-                    memcpy( &mmwData.newObjOut.x, &currentBufp->at(currentDatap), sizeof(mmwData.newObjOut.x));
-                    currentDatap += ( sizeof(mmwData.newObjOut.x) );
+		    //get Elevation value to multiply by
+                    memcpy( &mmwData.newSphereCloudOut.elevation, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.elevation));
+                    currentDatap += ( sizeof(mmwData.newSphereCloudOut.elevation) );
                 
-                    //get object y-coordinate (meters)
-                    memcpy( &mmwData.newObjOut.y, &currentBufp->at(currentDatap), sizeof(mmwData.newObjOut.y));
-                    currentDatap += ( sizeof(mmwData.newObjOut.y) );
+                    //get Azimuth value to multiply by
+                    memcpy( &mmwData.newSphereCloudOut.azimuth, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.azimuth));
+                    currentDatap += ( sizeof(mmwData.newSphereCloudOut.azimuth) );
                 
-                    //get object z-coordinate (meters)
-                    memcpy( &mmwData.newObjOut.z, &currentBufp->at(currentDatap), sizeof(mmwData.newObjOut.z));
-                    currentDatap += ( sizeof(mmwData.newObjOut.z) );
+                    //get Doppler value to multiply by
+                    memcpy( &mmwData.newSphereCloudOut.doppler, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.doppler));
+                    currentDatap += ( sizeof(mmwData.newSphereCloudOut.doppler) );
                 
-                    //get object velocity (m/s)
-                    memcpy( &mmwData.newObjOut.velocity, &currentBufp->at(currentDatap), sizeof(mmwData.newObjOut.velocity));
-                    currentDatap += ( sizeof(mmwData.newObjOut.velocity) );
+                    //get Range value to multiply by
+                    memcpy( &mmwData.newSphereCloudOut.range, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.range));
+                    currentDatap += ( sizeof(mmwData.newSphereCloudOut.range) );
 
-                    // Map mmWave sensor coordinates to ROS coordinate system
-                    RScan->points[i].x = mmwData.newObjOut.y;   // ROS standard coordinate system X-axis is forward which is the mmWave sensor Y-axis
-                    RScan->points[i].y = -mmwData.newObjOut.x;  // ROS standard coordinate system Y-axis is left which is the mmWave sensor -(X-axis)
-                    RScan->points[i].z = mmwData.newObjOut.z;   // ROS standard coordinate system Z-axis is up which is the same as mmWave sensor Z-axis
+		    //get SNR value to multiply by
+                    memcpy( &mmwData.newSphereCloudOut.snr, &currentBufp->at(currentDatap), sizeof(mmwData.newSphereCloudOut.snr));
+                    currentDatap += ( sizeof(mmwData.newSphereCloudOut.snr) );
+        
 
-                    RScan->points[i].velocity = mmwData.newObjOut.velocity;
+		    //multiple sensor output value by unit value to decompress data
+		    realElevation = mmwData.newSphereCloudOut.elevationUnit * mmwData.newSphereCloudOut.elevation;
+		    realAzimuth = mmwData.newSphereCloudOut.azimuthUnit * mmwData.newSphereCloudOut.azimuth;
+		    realDoppler = mmwData.newSphereCloudOut.dopplerUnit * mmwData.newSphereCloudOut.doppler;
+		    realRange = mmwData.newSphereCloudOut.rangeUnit * mmwData.newSphereCloudOut.range;
+		    realSNR =  mmwData.newSphereCloudOut.snrUnit * mmwData.newSphereCloudOut.snr;
+		  
+		    // Map mmWave sensor coordinates to ROS coordinate system while also converting from spherical to cartesian
+                    RScan->points[i].x = realRange * cos(realAzimuth) * cos(realElevation);   // ROS standard coordinate system X-axis is forward which is the mmWave sensor Y-axis
+                    RScan->points[i].y = -1 * realRange * sin(realAzimuth) * cos(realElevation);  // ROS standard coordinate system Y-axis is left which is the mmWave sensor -(X-axis)
+                    RScan->points[i].z = realRange * sin(realElevation);   // ROS standard coordinate system Z-axis is up which is the same as mmWave sensor Z-axis
+                    RScan->points[i].velocity = realDoppler;
+		    RScan->points[i].intensity = realSNR;
 
                     radarscan.header.frame_id = frameID;
                     radarscan.header.stamp = ros::Time::now();
 
                     radarscan.point_id = i;
-                    radarscan.x = mmwData.newObjOut.y;
-                    radarscan.y = -mmwData.newObjOut.x;
-                    radarscan.z = mmwData.newObjOut.z;
-                    // radarscan.range = temp[4];
-                    radarscan.velocity = mmwData.newObjOut.velocity;
-                    // radarscan.doppler_bin = tmp;
-                    // radarscan.bearing = temp[6];
-                    // radarscan.intensity = temp[5];
-                    
+                    radarscan.x = realRange * cos(realAzimuth) * cos(realElevation);
+                    radarscan.y = -1 * realRange * sin(realAzimuth) * cos(realElevation);
+                    radarscan.z = realRange * sin(realElevation);
+                    radarscan.range = realRange;
+                    radarscan.velocity = realDoppler;
+                    radarscan.intensity = realSNR;
 
-                    // For SDK 3.x, intensity is replaced by snr in sideInfo and is parsed in the READ_SIDE_INFO code
-                }
+		    if (((maxElevationAngleRatioSquared == -1) ||
+			 (((RScan->points[i].z * RScan->points[i].z) / (RScan->points[i].x * RScan->points[i].x +
+									RScan->points[i].y * RScan->points[i].y)
+			   ) < maxElevationAngleRatioSquared)
+			 ) &&
+			((maxAzimuthAngleRatio == -1) || (fabs(RScan->points[i].y / RScan->points[i].x) < maxAzimuthAngleRatio)) &&
+			(RScan->points[i].x != 0)
+			)
+		      {
+			radar_scan_pub.publish(radarscan);
+		      }
+		    i++;
 
-                if (((maxElevationAngleRatioSquared == -1) ||
-                             (((RScan->points[i].z * RScan->points[i].z) / (RScan->points[i].x * RScan->points[i].x +
-                                                                            RScan->points[i].y * RScan->points[i].y)
-                              ) < maxElevationAngleRatioSquared)
-                            ) &&
-                            ((maxAzimuthAngleRatio == -1) || (fabs(RScan->points[i].y / RScan->points[i].x) < maxAzimuthAngleRatio)) &&
-                                    (RScan->points[i].x != 0)
-                           )
-                {
-                    radar_scan_pub.publish(radarscan);
-                }
-                i++;
-            }
+	    }
 
-            sorterState = CHECK_TLV_TYPE;
+	    sorterState = CHECK_TLV_TYPE;
+	    break;
+	  
+
+	case READ_3D_TARGET_LIST:
+
+	    i = 0;
+            offset = 0;
+
+	    
+	    
+            pcl_conversions::toPCL(ros::Time::now(), RScan->header.stamp);
+            mmwData.numObjOut = mmwData.header.numDetectedObj;
+	    radartrackarray.header.frame_id = frameID;
+            radartrackarray.header.stamp = ros::Time::now();
+            radartrackarray.num_tracks = (int) tlvLen / 112;
+
+	    //ROS_INFO("Number of Tracks is: %d",(tlvLen / 112));
+	    while( i < radartrackarray.num_tracks ) {
+	      
+	            //get Track ID
+	            memcpy( &mmwData.newListOut.tid, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.tid));
+                    currentDatap += ( sizeof(mmwData.newListOut.tid) );
+
+		    //get Track position in X dimension (m)
+	            memcpy( &mmwData.newListOut.posX, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.posX));
+                    currentDatap += ( sizeof(mmwData.newListOut.posX) );
+		    
+		    //get Track position in Y dimension (m)
+	            memcpy( &mmwData.newListOut.posY, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.posY));
+                    currentDatap += ( sizeof(mmwData.newListOut.posY) );
+
+		    //get Track position in Z dimension (m)
+	            memcpy( &mmwData.newListOut.posZ, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.posZ));
+                    currentDatap += ( sizeof(mmwData.newListOut.posZ) );
+
+		    //get Track velocity in X dimension (m)
+	            memcpy( &mmwData.newListOut.velX, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.velX));
+                    currentDatap += ( sizeof(mmwData.newListOut.velX) );
+
+		    //get Track velocity in Y dimension (m)
+	            memcpy( &mmwData.newListOut.velY, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.velY));
+                    currentDatap += ( sizeof(mmwData.newListOut.velY) );
+
+		    //get Track velocity in Z dimension (m)
+	            memcpy( &mmwData.newListOut.velZ, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.velZ));
+                    currentDatap += ( sizeof(mmwData.newListOut.velZ) );
+
+		    //get Track acceleration in X dimension (m)
+	            memcpy( &mmwData.newListOut.accX, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.accX));
+                    currentDatap += ( sizeof(mmwData.newListOut.accX) );
+
+		    //get Track acceleration in Y dimension (m)
+	            memcpy( &mmwData.newListOut.accY, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.accY));
+                    currentDatap += ( sizeof(mmwData.newListOut.accY) );
+
+		    //get Track acceleration in Z dimension (m)
+	            memcpy( &mmwData.newListOut.accZ, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.accZ));
+                    currentDatap += ( sizeof(mmwData.newListOut.accZ) );
+
+		    //Throw Away
+	            memcpy( &mmwData.newListOut.ec, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.ec));
+                    currentDatap += ( sizeof(mmwData.newListOut.ec) );
+
+		    //Throw Away
+	            memcpy( &mmwData.newListOut.g, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.g));
+                    currentDatap += ( sizeof(mmwData.newListOut.g) );
+
+		    //Throw Away
+	            memcpy( &mmwData.newListOut.confidenceLevel, &currentBufp->at(currentDatap), sizeof(mmwData.newListOut.confidenceLevel));
+                    currentDatap += ( sizeof(mmwData.newListOut.confidenceLevel) );
+
+		    //throw away first track in order to allign with PointCloud
+		    /*
+		    if (frameID == 0){
+		      radartrack.header.frame_id = frameID;
+		    }
+		    else{
+		      radartrack.header.frame_id = frameID - 1;
+		    }
+		    */
+
+		    radartrackcontents.header.frame_id = frameID;
+		    radartrackcontents.header.stamp = ros::Time::now();
+		    radartrackcontents.tid = mmwData.newListOut.tid;
+		    radartrackcontents.posx = mmwData.newListOut.posY;  // ROS standard coordinate system X-axis is forward which is the mmWave sensor Y-axis
+		    radartrackcontents.posy = -mmwData.newListOut.posX; // ROS standard coordinate system Y-axis is left which is the mmWave sensor -(X-axis)
+		    radartrackcontents.posz = mmwData.newListOut.posZ;
+		    radartrackcontents.velx = mmwData.newListOut.velY;
+		    radartrackcontents.vely = -mmwData.newListOut.velX;
+		    radartrackcontents.velz = mmwData.newListOut.velZ;
+		    radartrackcontents.accx = mmwData.newListOut.accY;
+		    radartrackcontents.accy = -mmwData.newListOut.accX;
+		    radartrackcontents.accz = mmwData.newListOut.accZ;
+		    
+		    radartrackarray.track.push_back(radartrackcontents);
+
+		    i++;
+
+		    }
+	    radar_trackarray_pub.publish(radartrackarray);
+	    radartrackarray.track.clear();
+
+	    sorterState = CHECK_TLV_TYPE;
+	    break;
+	  
+
+	case READ_TARGET_INDEX:
+
+	    i = 0;
+            offset = 0;
             
-            break;
-
-        case READ_SIDE_INFO:
-
-            // Make sure we already received and parsed detected obj list (READ_OBJ_STRUCT)
-            if (mmwData.numObjOut > 0)
-            {
-                for (i = 0; i < mmwData.numObjOut; i++)
-                {
-                    //get snr (unit is 0.1 steps of dB)
-                    memcpy( &mmwData.sideInfo.snr, &currentBufp->at(currentDatap), sizeof(mmwData.sideInfo.snr));
-                    currentDatap += ( sizeof(mmwData.sideInfo.snr) );                
-                    //get noise (unit is 0.1 steps of dB)
-                    memcpy( &mmwData.sideInfo.noise, &currentBufp->at(currentDatap), sizeof(mmwData.sideInfo.noise));
-                    currentDatap += ( sizeof(mmwData.sideInfo.noise) );
-
-                    RScan->points[i].intensity = (float) mmwData.sideInfo.snr / 10.0;   // Use snr for "intensity" field (divide by 10 since unit of snr is 0.1dB)
-                }
-            }
-            else  // else just skip side info section if we have not already received and parsed detected obj list
-            {
-              i = 0;
+            mmwData.numObjOut = mmwData.header.numDetectedObj;
             
-              while (i++ < tlvLen - 1)
-              {
-                     //ROS_INFO("DataUARTHandler Sort Thread : Parsing Side Info i=%d and tlvLen = %u", i, tlvLen);
-              }
-            
-              currentDatap += tlvLen;
-            }
-            
-            sorterState = CHECK_TLV_TYPE;
-            
-            break;
-
-        case READ_OCCUPANCY:
-
-
+            pcl_conversions::toPCL(ros::Time::now(), RScan->header.stamp);
             RScan->header.frame_id = frameID;
             RScan->height = 1;
             RScan->width = mmwData.numObjOut;
             RScan->is_dense = 1;
             RScan->points.resize(RScan->width * RScan->height);
 
-            //get Occupancy State which is a uint32, 0 means that zone is unoccupied. Anything else means the stop zone is occupied
-            memcpy( &mmwData.occupancy.state, &currentBufp->at(currentDatap), sizeof(mmwData.occupancy.state));
-            currentDatap += ( sizeof(mmwData.occupancy.state) );
-	    
-	    radaroccupancy.state = mmwData.occupancy.state;
+            while( i < tlvLen ) {
 
-	    if (radaroccupancy.state == 0){
-	      // ROS_INFO("Area is clear!"); 
+	      	    //get point's associated Track (int)
+                    memcpy( &mmwData.newIndexOut.targetID, &currentBufp->at(currentDatap), sizeof(mmwData.newIndexOut.targetID));
+                    currentDatap += ( sizeof(mmwData.newIndexOut.targetID) );
+
+	    //      throw away first track in order to allign with PointCloud
+		//  if (frameID == 0){
+		    radartrackid.header.frame_id = frameID;
+		//  }
+	    //  else{
+		//     radartrackid.header.frame_id = frameID - 1;
+	    //  }
+		    radartrackid.header.stamp = ros::Time::now();
+		    radartrackid.tid = mmwData.newIndexOut.targetID;
+		    
+		    radar_trackid_pub.publish(radartrackid);
+		    i++;
 	    }
-	    else{
-	      // ROS_INFO("Area is OCCUPIED!");
-	    }
 
-	    radar_occupancy_pub.publish(radaroccupancy);
-	    
-            sorterState = CHECK_TLV_TYPE;
-
-            break;
-
-        case READ_LOG_MAG_RANGE:
-            {
-
-              sorterState = CHECK_TLV_TYPE;
-            }
-            
-            break;
-            
-        case READ_NOISE:
-            {
-        
-              i = 0;
-            
-              while (i++ < tlvLen - 1)
-              {
-                     //ROS_INFO("DataUARTHandler Sort Thread : Parsing Noise Profile i=%d and tlvLen = %u", i, tlvLen);
-              }
-            
-              currentDatap += tlvLen;
-            
-              sorterState = CHECK_TLV_TYPE;
-            }
-           
-            break;
-            
-        case READ_AZIMUTH:
-            {
-        
-              i = 0;
-            
-              while (i++ < tlvLen - 1)
-              {
-                     //ROS_INFO("DataUARTHandler Sort Thread : Parsing Azimuth Profile i=%d and tlvLen = %u", i, tlvLen);
-              }
-            
-              currentDatap += tlvLen;
-            
-              sorterState = CHECK_TLV_TYPE;
-            }
-            
-            break;
-            
-        case READ_DOPPLER:
-            {
-        
-              i = 0;
-            
-              while (i++ < tlvLen - 1)
-              {
-                     //ROS_INFO("DataUARTHandler Sort Thread : Parsing Doppler Profile i=%d and tlvLen = %u", i, tlvLen);
-              }
-            
-              currentDatap += tlvLen;
-            
-              sorterState = CHECK_TLV_TYPE;
-            }
-            
-            break;
-            
-        case READ_STATS:
-            {
-        
-              i = 0;
-            
-              while (i++ < tlvLen - 1)
-              {
-                     //ROS_INFO("DataUARTHandler Sort Thread : Parsing Stats Profile i=%d and tlvLen = %u", i, tlvLen);
-              }
-            
-              currentDatap += tlvLen;
-            
-              sorterState = CHECK_TLV_TYPE;
-            }
-            
-            break;
+	    sorterState = CHECK_TLV_TYPE;
+	    break;
         
         case CHECK_TLV_TYPE:
         
@@ -743,15 +695,11 @@ void *DataUARTHandler::sortIncomingData( void )
                 memcpy( &tlvType, &currentBufp->at(currentDatap), sizeof(tlvType));
                 currentDatap += ( sizeof(tlvType) );
                 
-                //ROS_INFO("DataUARTHandler Sort Thread : sizeof(tlvType) = %d", sizeof(tlvType));
             
                 //get tlvLen (32 bits) & remove from queue
                 memcpy( &tlvLen, &currentBufp->at(currentDatap), sizeof(tlvLen));
                 currentDatap += ( sizeof(tlvLen) );
-                
-                //ROS_INFO("DataUARTHandler Sort Thread : sizeof(tlvLen) = %d", sizeof(tlvLen));
-                
-                //ROS_INFO("DataUARTHandler Sort Thread : tlvType = %d, tlvLen = %d", (int) tlvType, tlvLen);
+                ;
             
                 switch(tlvType)
                 {
@@ -759,49 +707,24 @@ void *DataUARTHandler::sortIncomingData( void )
                 
                     break;
                 
-                case MMWDEMO_OUTPUT_MSG_DETECTED_POINTS:
-                    //ROS_INFO("DataUARTHandler Sort Thread : Object TLV");
-                    sorterState = READ_OBJ_STRUCT;
+                case MMWDEMO_OUTPUT_MSG_COMPRESSED_POINTS:
+                    //ROS_INFO("DataUARTHandler Sort Thread : Compressed Points TLV");
+                    sorterState = READ_SPHERE_POINT_CLOUD;
                     break;
                 
-                case MMWDEMO_OUTPUT_MSG_RANGE_PROFILE:
-                    //ROS_INFO("DataUARTHandler Sort Thread : Range TLV");
-                    sorterState = READ_LOG_MAG_RANGE;
+                case MMWDEMO_OUTPUT_MSG_TRACKERPROC_3D_TARGET_LIST:
+                    //ROS_INFO("DataUARTHandler Sort Thread : 3D Target List TLV");
+                    sorterState = READ_3D_TARGET_LIST;
                     break;
                 
-                case MMWDEMO_OUTPUT_MSG_NOISE_PROFILE:
-                    //ROS_INFO("DataUARTHandler Sort Thread : Noise TLV");
-                    sorterState = READ_NOISE;
-                    break;
-                
-                case MMWDEMO_OUTPUT_MSG_AZIMUTH_STATIC_HEAT_MAP:
-                    //ROS_INFO("DataUARTHandler Sort Thread : Azimuth Heat TLV");
-                    sorterState = READ_AZIMUTH;
-                    break;
-                
-                case MMWDEMO_OUTPUT_MSG_RANGE_DOPPLER_HEAT_MAP:
-                    //ROS_INFO("DataUARTHandler Sort Thread : R/D Heat TLV");
-                    sorterState = READ_DOPPLER;
-                    break;
-                
-                case MMWDEMO_OUTPUT_MSG_STATS:
-                    //ROS_INFO("DataUARTHandler Sort Thread : Stats TLV");
-                    sorterState = READ_STATS;
-                    break;
-                
-                case MMWDEMO_OUTPUT_MSG_DETECTED_POINTS_SIDE_INFO:
-                    //ROS_INFO("DataUARTHandler Sort Thread : Side info TLV");
-                    sorterState = READ_SIDE_INFO;
-                    break;
-
+                case MMWDEMO_OUTPUT_MSG_TRACKERPROC_TARGET_INDEX:
+                    //ROS_INFO("DataUARTHandler Sort Thread : Target Index TLV");
+                    sorterState = READ_TARGET_INDEX;
+                    break;		  
+		    
                 case MMWDEMO_OUTPUT_MSG_MAX:
                     //ROS_INFO("DataUARTHandler Sort Thread : Header TLV");
                     sorterState = READ_HEADER;
-                    break;
-
-                case MMWDEMO_OUTPUT_MSG_OCCUPANCY_STATE_MACHINE:
-                    //ROS_INFO("DataUARTHandler Sort Thread : Occupancy State Machine TLV");
-                    sorterState = READ_OCCUPANCY;
                     break;
                 
                 default: break;
@@ -928,9 +851,8 @@ void* DataUARTHandler::syncedBufferSwap_helper(void *context)
     return (static_cast<DataUARTHandler*>(context)->syncedBufferSwap());
 }
 
-void DataUARTHandler::visualize(const ti_mmwave_rospkg::RadarScan &msg){
-  
-  visualization_msgs::Marker marker;
+void DataUARTHandler::visualize(const ti_mmwave_tracker_rospkg::RadarScan &msg){
+    visualization_msgs::Marker marker;
 
     marker.header.frame_id = frameID;
     marker.header.stamp = ros::Time::now();
@@ -959,7 +881,6 @@ void DataUARTHandler::visualize(const ti_mmwave_rospkg::RadarScan &msg){
 
     marker_pub.publish(marker);
 }
-
 
 void DataUARTHandler::stop()
 {

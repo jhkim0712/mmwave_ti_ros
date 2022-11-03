@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ti_mmwave_rospkg)
+project(ti_mmwave_tracker_rospkg)
 
 set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -63,7 +63,9 @@ find_package(PCL 1.7.2 REQUIRED)
 add_message_files(
   FILES
   RadarScan.msg
-  RadarOccupancy.msg
+  RadarPointTrackID.msg
+  RadarTrackArray.msg
+  RadarTrackContents.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -118,7 +120,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES mmwave
-  CATKIN_DEPENDS nodelet roscpp serial std_msgs
+  CATKIN_DEPENDS nodelet roscpp serial std_msgs message_runtime
   DEPENDS system_lib
 )
 
@@ -131,7 +133,7 @@ catkin_package(
 # include_directories(include)
 include_directories( include
   ${catkin_INCLUDE_DIRS}
-  ${ti_mmwave_rospkg_INCLUDE_DIRS}
+  ${ti_mmwave_tracker_rospkg_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${pthread_INCLUDE_DIRS}
   ${rt_INCLUDE_DIRS}
@@ -160,7 +162,7 @@ add_dependencies(mmwave ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TA
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/ti_mmwave_rospkg_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/ti_mmwave_tracker_rospkg_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -221,12 +223,14 @@ add_executable(mmWaveQuickConfig src/mmWaveQuickConfig.cpp)
 target_link_libraries(mmWaveQuickConfig ${catkin_LIBRARIES} mmwave ${PCL_LIBRARIES})
 add_dependencies(mmWaveQuickConfig ${catkin_EXPORTED_TARGETS} mmwave)
 
+
+
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ti_mmwave_rospkg.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_ti_mmwave_tracker_rospkg.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
