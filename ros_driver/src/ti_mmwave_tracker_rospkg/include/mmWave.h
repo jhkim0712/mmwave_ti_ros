@@ -53,45 +53,26 @@
 enum MmwDemo_Output_TLV_Types
 {
     MMWDEMO_OUTPUT_MSG_NULL = 0,
-    /*! @brief   List of detected points */
-    MMWDEMO_OUTPUT_MSG_DETECTED_POINTS = 1,
 
-    /*! @brief   Range profile */
-    MMWDEMO_OUTPUT_MSG_RANGE_PROFILE = 2,
+    /*! @brief   Tracker TLV's */
+    MMWDEMO_OUTPUT_MSG_TRACKERPROC_3D_TARGET_LIST = 1010,
 
-    /*! @brief   Noise floor profile */
-    MMWDEMO_OUTPUT_MSG_NOISE_PROFILE = 3,
+    /*! @brief   Tracker TLV's*/
+    MMWDEMO_OUTPUT_MSG_TRACKERPROC_TARGET_INDEX = 1011,
 
-    /*! @brief   Samples to calculate static azimuth  heatmap */
-    MMWDEMO_OUTPUT_MSG_AZIMUTH_STATIC_HEAT_MAP = 4,
+    /*! @brief   3D Spherical Compressed Point Cloud */
+    MMWDEMO_OUTPUT_MSG_COMPRESSED_POINTS = 1020,
 
-    /*! @brief   Range/Doppler detection matrix */
-    MMWDEMO_OUTPUT_MSG_RANGE_DOPPLER_HEAT_MAP = 5,
-
-    /*! @brief   Stats information */
-    MMWDEMO_OUTPUT_MSG_STATS = 6,
-
-    /*! @brief   List of detected points side information */
-    MMWDEMO_OUTPUT_MSG_DETECTED_POINTS_SIDE_INFO = 7,
-
-
-    /*! @brief   Occupancy State Machine information TLV */
-    MMWDEMO_OUTPUT_MSG_OCCUPANCY_STATE_MACHINE = 1030,
-
-    MMWDEMO_OUTPUT_MSG_MAX
+    MMWDEMO_OUTPUT_MSG_MAX = 3
 };
 
 enum SorterState{ READ_HEADER, 
     CHECK_TLV_TYPE,
-    READ_OBJ_STRUCT, 
-    READ_LOG_MAG_RANGE, 
-    READ_NOISE, 
-    READ_AZIMUTH, 
-    READ_DOPPLER, 
-    READ_STATS,
+    READ_SPHERE_POINT_CLOUD, 
+    READ_3D_TARGET_LIST, 
+    READ_TARGET_INDEX, 
     SWAP_BUFFERS,
-    READ_SIDE_INFO,
-    READ_OCCUPANCY};
+    READ_SIDE_INFO};
 
 struct MmwDemo_output_message_header_t
     {
@@ -140,19 +121,19 @@ struct MmwDemo_DetectedObj
 */
 typedef struct DPIF_PointCloudCartesian_t
 {
-/*! @brief x - coordinate in meters */
-float x;
+  /*! @brief x - coordinate in meters */
+  float x;
 
-/*! @brief y - coordinate in meters */
-float y;
+  /*! @brief y - coordinate in meters */
+  float y;
 
-/*! @brief z - coordinate in meters */
-float z;
+  /*! @brief z - coordinate in meters */
+  float z;
 
-/*! @brief Doppler velocity estimate in m/s. Positive velocity means target
-* is moving away from the sensor and negative velocity means target
-* is moving towards the sensor. */
-float velocity;
+  /*! @brief Doppler velocity estimate in m/s. Positive velocity means target
+   * is moving away from the sensor and negative velocity means target
+   * is moving towards the sensor. */
+  float velocity;
 }DPIF_PointCloudCartesian;
 
 /**
@@ -162,31 +143,119 @@ float velocity;
 */
 typedef struct DPIF_PointCloudSideInfo_t
 {
-/*! @brief snr - CFAR cell to side noise ratio in dB expressed in 0.1 steps of dB */
-int16_t snr;
+  /*! @brief snr - CFAR cell to side noise ratio in dB expressed in 0.1 steps of dB */
+  int16_t snr;
 
-/*! @brief y - CFAR noise level of the side of the detected cell in dB expressed in 0.1 steps of dB */
-int16_t noise;
+  /*! @brief y - CFAR noise level of the side of the detected cell in dB expressed in 0.1 steps of dB */
+  int16_t noise;
 }DPIF_PointCloudSideInfo;
 
 
-typedef struct DPIF_PointCloudOccupancy_t
+typedef struct DPIF_TargetList3D_t
+{
+  /*! Track ID */
+  int32_t tid;
+
+  // Target position in X dimension, m
+  float posX;
+
+  // Target position in Y dimension, m
+  float posY;
+
+  // Target position in Z dimension, m
+  float posZ;
+
+  // Target velocity in X dimension, m/s
+  float velX;
+
+  // Target velocity in Y dimension, m/s
+  float velY;
+
+  // Target velocity in Z dimension, m/s
+  float velZ;
+
+  // Target acceleration in X dimension, m/s2
+  float accX;
+
+  // Target acceleration in Y dimension, m/s2
+  float accY;
+
+  // Target acceleration in Z dimension, m/s2
+  float accZ;
+
+  // Throw Away
+  float ec[4][4];
+
+  // Throw Away
+  float g;
+
+  // Throw Away
+  float confidenceLevel;
+}DPIF_TargetList3D_t;
+
+
+typedef struct DPIF_TargetIndex_t
+{
+  /*! TrackID 253, 254, and 255 are special values where points are not associated due to SNR being too weak, located outside of boundary, or considered noise respectively */
+  int8_t targetID;
+
+}DPIF_TargetIndex_t;
+
+typedef struct DPIF_SphericalPointCloud_t
 {
 
-/*! @brief state - CFAR cell to side noise ratio in dB expressed in 0.1 steps of dB */
-uint32_t state;
+  /*
 
-}DPIF_PointCloudOccupancy;
+    As the Spherical Point Cloud is compressed, we decompress after pulling all these values by multipling the parameter by its 'unit' counterpart
+
+  */
+  float elevationUnit;
+
+
+  float azimuthUnit;
+
+
+  float dopplerUnit;
+
+
+  float rangeUnit;
+
+
+  float snrUnit;
+
+
+  int8_t elevation;
+
+
+  int8_t azimuth;
+
+
+  int16_t doppler;
+
+  
+  uint16_t range;
+
+  
+  uint16_t snr;
+
+  
+}DPIF_SphericalPointCloud_t;
+
 
 struct mmwDataPacket{
-MmwDemo_output_message_header_t header;
-uint16_t numObjOut;
-uint16_t xyzQFormat; // only used for SDK 1.x and 2.x
-MmwDemo_DetectedObj objOut; // only used for SDK 1.x and 2.x
+  MmwDemo_output_message_header_t header;
+  uint16_t numObjOut;
+  /*
+    uint16_t xyzQFormat; // only used for SDK 1.x and 2.x
+    MmwDemo_DetectedObj objOut; // only used for SDK 1.x and 2.x
+    DPIF_PointCloudCartesian_t newObjOut; // used for SDK 3.x
+    DPIF_PointCloudSideInfo_t sideInfo; // used for SDK 3.x
+  */
 
-DPIF_PointCloudCartesian_t newObjOut; // used for SDK 3.x
-DPIF_PointCloudSideInfo_t sideInfo; // used for SDK 3.x
-DPIF_PointCloudOccupancy occupancy; // added for Occupancy Zones
+  DPIF_TargetList3D_t newListOut;
+  DPIF_TargetIndex_t newIndexOut;
+  DPIF_SphericalPointCloud_t newSphereCloudOut;
+
 };
 
 const uint8_t magicWord[8] = {2, 1, 4, 3, 6, 5, 8, 7};

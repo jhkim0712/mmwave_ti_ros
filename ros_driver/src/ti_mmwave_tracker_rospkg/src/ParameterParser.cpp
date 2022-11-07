@@ -1,14 +1,14 @@
 #include "ParameterParser.h"
 
-namespace ti_mmwave_rospkg {
+namespace ti_mmwave_tracker_rospkg {
 
-PLUGINLIB_EXPORT_CLASS(ti_mmwave_rospkg::ParameterParser, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(ti_mmwave_tracker_rospkg::ParameterParser, nodelet::Nodelet);
 
 ParameterParser::ParameterParser() {}
 
 void ParameterParser::onInit() {}
 
-void ParameterParser::ParamsParser(ti_mmwave_rospkg::mmWaveCLI &srv, ros::NodeHandle &nh) {
+void ParameterParser::ParamsParser(ti_mmwave_tracker_rospkg::mmWaveCLI &srv, ros::NodeHandle &nh) {
 
     //   ROS_ERROR("%s",srv.request.comm.c_str());
     //   ROS_ERROR("%s",srv.response.resp.c_str());
@@ -53,28 +53,11 @@ void ParameterParser::ParamsParser(ti_mmwave_rospkg::mmWaveCLI &srv, ros::NodeHa
                 case 5:
                     nh.setParam("/ti_mmwave/framePeriodicity", std::stof(token)); break;
                 }
-            } else if (!req.compare("zoneDef")) {
-
-	      switch (i) {
-		case 2:
-                    nh.setParam("/ti_mmwave/zoneMinX", std::stoi(token)); break;
-                case 3:
-                    nh.setParam("/ti_mmwave/zoneMaxX", std::stoi(token)); break;
-		case 4:
-                    nh.setParam("/ti_mmwave/zoneMinY", std::stoi(token)); break;
-                case 5:
-		    nh.setParam("/ti_mmwave/zoneMaxY", std::stoi(token)); break;
-		case 6:
-                    nh.setParam("/ti_mmwave/zoneMinZ", std::stoi(token)); break;
-                case 7:
-		    nh.setParam("/ti_mmwave/zoneMaxZ", std::stoi(token)); break;		    
-
-	      }
-	    } else req = token;
+            }
+        } else req = token;
         i++;
-	}
     }
-}
+    }
 
 void ParameterParser::CalParams(ros::NodeHandle &nh) {
     float c0 = 299792458;
@@ -89,12 +72,6 @@ void ParameterParser::CalParams(ros::NodeHandle &nh) {
     float digOutSampleRate;
     float freqSlopeConst;
     float numAdcSamples;
-    float zoneMinX;
-    float zoneMaxX;
-    float zoneMinY;
-    float zoneMaxY;
-    float zoneMinZ;
-    float zoneMaxZ;
 
     nh.getParam("/ti_mmwave/startFreq", startFreq);
     nh.getParam("/ti_mmwave/idleTime", idleTime);
@@ -135,6 +112,6 @@ void ParameterParser::CalParams(ros::NodeHandle &nh) {
     nh.setParam("/ti_mmwave/range_resolution", vrange);
     nh.setParam("/ti_mmwave/max_doppler_vel", max_vel);
     nh.setParam("/ti_mmwave/doppler_vel_resolution", vvel);
-
 }
+
 }

@@ -82,10 +82,10 @@ void Sync::configureSensors()
                         } 
                         else 
                         {
-                            ROS_ERROR("mmWaveSync: Command failed (mmWave sensor did not respond with 'Done')");
-                            ROS_ERROR("mmWaveSync: Response: '%s'", srv.response.resp.c_str() );
-                            m_done = true;
-                            return;
+			  // ROS_ERROR("mmWaveSync: Command failed (mmWave sensor did not respond with 'Done')");
+			  // ROS_ERROR("mmWaveSync: Response: '%s'", srv.response.resp.c_str() );
+                          // m_done = true;
+                          // return;
                         }
                     } 
                     else 
