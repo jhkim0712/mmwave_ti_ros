@@ -16,6 +16,9 @@ C:\ti\<mmwave_sdk_version>\packages\ti\demo\<device>\mmw
 
 Correct binary to be flashed for ROS Driver:
 
+xWRL6432:
+xwrl6432_mmw_demo.appimage
+
 xWR6843AOP/ISK + Tracking (Capon Chain):
 3D People Counting binary
 

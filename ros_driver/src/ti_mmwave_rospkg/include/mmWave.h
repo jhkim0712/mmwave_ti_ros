@@ -74,11 +74,11 @@ enum MmwDemo_Output_TLV_Types
     /*! @brief   List of detected points side information */
     MMWDEMO_OUTPUT_MSG_DETECTED_POINTS_SIDE_INFO = 7,
 
+    MMWDEMO_OUTPUT_MSG_MAX,
 
     /*! @brief   Occupancy State Machine information TLV */
-    MMWDEMO_OUTPUT_MSG_OCCUPANCY_STATE_MACHINE = 1030,
+    MMWDEMO_OUTPUT_MSG_OCCUPANCY_STATE_MACHINE = 1030
 
-    MMWDEMO_OUTPUT_MSG_MAX
 };
 
 enum SorterState{ READ_HEADER, 

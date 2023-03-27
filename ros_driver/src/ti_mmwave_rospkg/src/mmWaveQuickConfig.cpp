@@ -41,16 +41,16 @@ int main(int argc, char **argv) {
             if (std::regex_search(srv.response.resp, std::regex("Done"))) {
                 // ROS_INFO("mmWaveQuickConfig: Command successful (mmWave sensor responded with 'Done')");            
                 parser.ParamsParser(srv, nh);
-            } else {
-                ROS_ERROR("mmWaveQuickConfig: Command failed (mmWave sensor did not respond with 'Done')");
-                ROS_ERROR("mmWaveQuickConfig: Response: '%s'", srv.response.resp.c_str() );
-                return 1;
-            }
-            } else {
-            ROS_ERROR("mmWaveQuickConfig: Failed to call service mmWaveCLI");
-            ROS_ERROR("%s", srv.request.comm.c_str() );
-            return 1;
-            }
+		} else {
+	           ROS_INFO("mmWaveQuickConfig: Command failed (mmWave sensor did not respond with 'Done')");
+                   ROS_INFO("mmWaveQuickConfig: Response: '%s'", srv.response.resp.c_str() );
+		   //return 1;
+		}
+             } else {
+	        ROS_INFO("mmWaveQuickConfig: Failed to call service mmWaveCLI");
+                ROS_INFO("%s", srv.request.comm.c_str() );
+		// return 1;
+             }
         }
         }
         parser.CalParams(nh);
