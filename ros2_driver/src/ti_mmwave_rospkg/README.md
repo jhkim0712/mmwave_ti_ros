@@ -30,7 +30,7 @@ TI mmWave IWRL6432 EVM
 ### Quick start guide:
 1. Mount mmWave Sensor if necessary and connect a micro-USB cable to host computer that has [ROS2 Humble](https://docs.ros.org/en/humble/index.html).
 
-2. Download the mmWave [SDK](https://www.ti.com/tool/MMWAVE-SDK) or [L-SDK](https://www.ti.com/tool/MMWAVE-L-SDK) and then use [UNIFLASH](http://www.ti.com/tool/UNIFLASH) to flash xwr16xx_mmw_demo.bin to your device.  
+2. Download the mmWave [SDK](https://www.ti.com/tool/MMWAVE-SDK) or [L-SDK](https://www.ti.com/tool/MMWAVE-L-SDK) and then use [UNIFLASH](http://www.ti.com/tool/UNIFLASH) to flash a binary to your device.  
 **Do not forget to change your device's mux switches to and from flashing mode when flashing. Check the EVM Setup Operational Modes user guide in the Radar Toolbox under Hardware Guides**
 
 3. Clone this repo into your `<workspace dir>/src`:
