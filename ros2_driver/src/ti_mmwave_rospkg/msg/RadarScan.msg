@@ -1,0 +1,13 @@
+uint32 seq
+uint32 stamp
+string frame_id
+uint16 point_id
+float32 x
+float32 y
+float32 z
+float32 range
+float32 velocity
+uint16 doppler_bin
+float32 bearing
+uint16 intensity
+uint16 noise

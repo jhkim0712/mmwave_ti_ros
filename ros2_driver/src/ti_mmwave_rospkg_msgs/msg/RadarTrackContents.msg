@@ -1,0 +1,12 @@
+string frame_id
+uint32 stamp
+uint32 tid
+float32 posx
+float32 posy
+float32 posz
+float32 velx
+float32 vely
+float32 velz
+float32 accx
+float32 accy
+float32 accz
