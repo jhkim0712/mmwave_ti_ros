@@ -8,14 +8,14 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
 
     # Enter Path and Name Here
-    path = "/home/rosi2/ros2_driver/src/ti_mmwave_rospkg/cfg/1443_Standard.cfg";
+    my_package_dir = get_package_share_directory('ti_mmwave_rospkg')
+    path = os.path.join(my_package_dir,'cfg','1443_Standard.cfg')
     device = "1443"
     name = "/mmWaveCLI"
     command_port = "/dev/ttyUSB0"
     command_rate = "115200"
     data_port = "/dev/ttyUSB1"
     data_rate = "921600"
-    my_package_dir = get_package_share_directory('ti_mmwave_rospkg')
 
     ld = LaunchDescription()
     ConfigParameters = os.path.join(
@@ -49,7 +49,7 @@ def generate_launch_description():
         {"mmwavecli_cfg": path}
         ]
     )
-    
+
     mmWaveQuickConfig = Node(
         package="ti_mmwave_rospkg",
         executable="mmWaveQuickConfig",
@@ -90,10 +90,9 @@ def generate_launch_description():
 
     )
     Rviz2 = Node(
-             package='rviz2',
-             executable='rviz2',
-             arguments=['-d', os.path.join(my_package_dir, 'launch', 'rviz.rviz')]
-        
+        package='rviz2',
+        executable='rviz2',
+        arguments=['-d', os.path.join(my_package_dir, 'launch', 'rviz.rviz')]
     )
 
     ld.add_action(global_param_node)

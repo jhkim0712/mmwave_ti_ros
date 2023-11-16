@@ -1,23 +1,32 @@
 import os
-from launch import LaunchDescription
-from launch.substitutions import PathJoinSubstitution
+from launch import LaunchDescription, conditions
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
+    # Declare the launch argument
+    rviz_arg = DeclareLaunchArgument(
+        'rviz',
+        default_value='true',
+        description='Enable RViz'
+    )
+
+    # Use the launch argument in the condition for adding the RViz node
+    rviz_enabled = LaunchConfiguration('rviz')
+
     # Enter Path and Name Here
-    path = "/home/rosi2/ros2_driver/src/ti_mmwave_rospkg/cfg/6843AOP_Tracking.cfg";
+    my_package_dir = get_package_share_directory('ti_mmwave_rospkg')
+    path = os.path.join(my_package_dir,'cfg','6843AOP_Tracking.cfg')
     device = "6843"
     name = "/mmWaveCLI"
     command_port = "/dev/ttyUSB0"
     command_rate = "115200"
     data_port = "/dev/ttyUSB1"
     data_rate = "921600"
-    my_package_dir = get_package_share_directory('ti_mmwave_rospkg')
 
-    ld = LaunchDescription()
     ConfigParameters = os.path.join(
         my_package_dir,
         'config',
@@ -32,24 +41,24 @@ def generate_launch_description():
     )
 
     mmWaveCommSrv = Node(
-    package="ti_mmwave_rospkg",
-    executable="mmWaveCommSrv",
-    name="mmWaveCommSrv",
-    output="screen",
-    emulate_tty=True,
-    parameters=[
-        {"command_port": command_port},
-        {"command_rate": command_rate},
-        {"data_port": data_port},
-        {"data_rate": data_rate},
-        {"max_allowed_elevation_angle_deg": "90"},
-        {"max_allowed_azimuth_angle_deg": "90"},
-        {"frame_id": "/ti_mmwave_0"},
-        {"mmwavecli_name": name},
-        {"mmwavecli_cfg": path}
+        package="ti_mmwave_rospkg",
+        executable="mmWaveCommSrv",
+        name="mmWaveCommSrv",
+        output="screen",
+        emulate_tty=True,
+        parameters=[
+            {"command_port": command_port},
+            {"command_rate": command_rate},
+            {"data_port": data_port},
+            {"data_rate": data_rate},
+            {"max_allowed_elevation_angle_deg": "90"},
+            {"max_allowed_azimuth_angle_deg": "90"},
+            {"frame_id": "/ti_mmwave_0"},
+            {"mmwavecli_name": name},
+            {"mmwavecli_cfg": path}
         ]
     )
-    
+
     mmWaveQuickConfig = Node(
         package="ti_mmwave_rospkg",
         executable="mmWaveQuickConfig",
@@ -89,13 +98,16 @@ def generate_launch_description():
         ]
 
     )
+
     Rviz2 = Node(
-             package='rviz2',
-             executable='rviz2',
-             arguments=['-d', os.path.join(my_package_dir, 'launch', 'rviz.rviz')]
-        
+        package='rviz2',
+        executable='rviz2',
+        arguments=['-d', os.path.join(my_package_dir, 'launch', 'rviz.rviz')],
+        condition=conditions.IfCondition(rviz_enabled)  # only launch RViz if the argument is true
     )
 
+    ld = LaunchDescription()
+    ld.add_action(rviz_arg)
     ld.add_action(global_param_node)
     ld.add_action(mmWaveCommSrv)
     ld.add_action(mmWaveQuickConfig)
