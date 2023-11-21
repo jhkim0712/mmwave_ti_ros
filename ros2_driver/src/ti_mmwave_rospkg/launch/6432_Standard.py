@@ -11,14 +11,14 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
-    path = "/home/rosi2/ros2_driver/src/ti_mmwave_rospkg/cfg/6432_Standard_Uncompressed.cfg";
+    my_package_dir = get_package_share_directory('ti_mmwave_rospkg')
+    path = os.path.join(my_package_dir,'cfg','6432_Standard_Uncompressed.cfg')
     device = "6432"
     name = "/mmWaveCLI"
     command_port = "/dev/ttyACM0"
     command_rate = "115200"
     data_port = "/dev/ttyACM0"
     data_rate = "115200"
-    my_package_dir = get_package_share_directory('ti_mmwave_rospkg')
 
     ld = LaunchDescription()
     ConfigParameters = os.path.join(
@@ -52,7 +52,7 @@ def generate_launch_description():
         {"mmwavecli_cfg": path}
         ]
     )
-    
+
     mmWaveQuickConfig = Node(
         package="ti_mmwave_rospkg",
         executable="mmWaveQuickConfig",
@@ -79,7 +79,7 @@ def generate_launch_description():
     )
 
     delay = TimerAction(
-        period=5.0, 
+        period=5.0,
         actions=[Node(
         package="ti_mmwave_rospkg",
         executable="DataHandlerClass",
@@ -97,7 +97,7 @@ def generate_launch_description():
              package='rviz2',
              executable='rviz2',
              arguments=['-d', os.path.join(my_package_dir, 'launch', 'rviz.rviz')]
-        
+
         )]
     )
 
@@ -108,4 +108,4 @@ def generate_launch_description():
     ld.add_action(delay)
 
     return ld
-    
+

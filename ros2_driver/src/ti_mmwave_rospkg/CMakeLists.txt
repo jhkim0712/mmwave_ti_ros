@@ -224,6 +224,10 @@ install(DIRECTORY
   config
   DESTINATION share/${PROJECT_NAME}
 )
+install(DIRECTORY
+  cfg
+  DESTINATION share/${PROJECT_NAME}
+)
 install(TARGETS 
   mmWaveCommSrv 
   DESTINATION lib/${PROJECT_NAME}
