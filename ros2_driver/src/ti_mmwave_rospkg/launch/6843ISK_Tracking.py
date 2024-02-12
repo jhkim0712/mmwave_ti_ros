@@ -19,7 +19,7 @@ def generate_launch_description():
 
     # Enter Path and Name Here
     my_package_dir = get_package_share_directory('ti_mmwave_rospkg')
-    path = os.path.join(my_package_dir,'cfg','6843AOP_Tracking.cfg')
+    path = os.path.join(my_package_dir,'cfg','6843ISK_Tracking.cfg')
     device = "6843"
     name = "/mmWaveCLI"
     command_port = "/dev/ttyUSB0"
